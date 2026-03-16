@@ -11,7 +11,7 @@
 
 
 #Variables globales
-version=1.5.9 #version du programme
+version=1.5.10 #version du programme
 verbose=0 #indique au programme s'il doit garder la console clean ou pas
 build_system="make" #indique le build system à utiliser
 config_system="configure_full" #indique le système de configuration à utiliser
@@ -1225,6 +1225,13 @@ function restore
 
 
 
+#Sommes-nous root?
+if [ $(id -u) -ne 0 ]
+then
+	sudo="sudo"
+fi
+
+
 # Options et Commandes:
 for arg in "$@"
 do
@@ -1389,9 +1396,9 @@ do
 			fi
 			if [[ -v EDITOR ]]
 			then
-				$EDITOR "/usr/pkgs/$arg/.description"
+				$sudo $EDITOR "/usr/pkgs/$arg/.description"
 			else
-				nano "/usr/pkgs/$arg/.description"
+				$sudo nano "/usr/pkgs/$arg/.description"
 			fi
 		else
 			echo -e "\e[31mErreur!\e[0m Il semblerait que $arg n'ait pas été installé sur cette machine par minpkg."
@@ -1709,6 +1716,7 @@ do
 			;;
 
 		--insecure | --insécure)
+			#Pour les personnes insécures dans la vie...
 			insecure=1
 			verbose=1
 			;;
@@ -1834,13 +1842,6 @@ do
 done
 
 
-#Sommes-nous root?
-if [ $(id -u) -ne 0 ]
-then
-	sudo="sudo"
-fi
-
-
 #Gestion des erreurs et application des commandes:
 if [ ${#@} -eq 0 ]
 #Aucune commande ni option:
@@ -1905,7 +1906,7 @@ then
 			then
 				archiver=none
 			else
-				case pkg in
+				case $pkg in
 				*.tar*) #le package est un tarball
 					archiver=tar
 					;;
@@ -1915,7 +1916,7 @@ then
 					;;
 
 				*) #type d'archive impossible à déterminer
-					echo "\e[31mErreur:\e[0m Impossible de déterminer le type d'archive de $pkg!"
+					echo -e "\e[31mErreur:\e[0m Impossible de déterminer le type d'archive de $pkg!"
 					echo "Vous devrez le spécifier manuellement avec l'option --archiver."
 					echo "Entrez minpkg --archiver-help pour afficher la liste des archiveurs supportés."
 					exit
