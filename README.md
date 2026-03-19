@@ -47,9 +47,6 @@ Les options les plus utiles et/ou difficiles à comprendre sont expliquées ici:
 `--pkgs-path=...`: Cette option permet de changer l'endroit où sont réellement installés les packages.<br>
 Il n'y a pas vraiment de raison de changer la valeur par défaut (/usr/pkgs).
 
-`--with-globstar-on`: minpkg utilise parfois la feature "globstar" (`**`) de bash, qui est normalement désactivée par défaut. Si ce n'est pas le cas sur votre système, installez minpkg avec cette option.<br>
-Si vous utilisez parfois `**`, vous devriez utiliser cette option.
-
 `--without-installing`: Cette option au nom assez paradoxal n'est utile que sur un système à plusieurs usagers. Sur un tel système, le script install.sh devrait être exécuté par tous les autres usagers après l'installation de minpkg. Ce n'est toutefois pas nécessaire si ces usagers n'utiliseront pas minpkg.
 
 `--without-root-cache`: Vous pouvez utiliser cette option si vous ne voulez pas créer de dossiers/fichiers dans le répertoire /root. Si vous le faites, vous ne pourrez pas utiliser minpkg en tant que root. Vous pouvez toujours changer d'idée plus tard et créer manuellement ces dossiers.

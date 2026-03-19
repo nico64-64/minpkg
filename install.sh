@@ -9,7 +9,6 @@ INSTALL_PATH=/usr/bin
 CREATE_ROOT_CACHE_DIR=y
 PKGS_PATH=/usr/pkgs
 INSTALL_MINPKG=y
-WITH_GLOBSTAR_ON=n
 DEFAULT_PREFIX=/usr
 
 
@@ -38,10 +37,9 @@ do
 		echo -e "\t\t\t(valeur par défaut: /usr/bin)"
 		echo -e "--pkgs-path=...\t\tIndique l'endroit où seront installés les packages"
 		echo -e "\t\t\t(valeur par défaut: /usr/pkgs)"
-		echo -e "--verbose (-v)\t\tAffiche plus d'information sur les actions effectuées"
-		echo -e "--with-globstar-on\tUtilisez cette option si shopt globstar est activé"
+		echo -e "--verbose (-v)\t\tAffiche plus d'informations sur les actions effectuées"
 		echo -e "\t\t\tpar défaut sur votre système"
-		echo -e "--without-installing\tCrée les dossier de cache pour l'utilisateur,"
+		echo -e "--without-installing\tCrée les dossiers de cache pour l'utilisateur,"
 		echo -e "\t\t\tmais n'installe pas minpkg"
 		echo -e "--without-root-cache\tNe crée pas de dossier de cache pour l'utilisateur root"
 		echo ""
@@ -62,10 +60,6 @@ do
 	
 	--verbose | -v)
 		VERBOSE='-v'
-		;;
-	
-	--with-globstar-on)
-		WITH_GLOBSTAR_ON=y
 		;;
 	
 	--without-installing)
@@ -140,10 +134,6 @@ then
 	fi
 
 	# Corrections:
-	if [ $WITH_GLOBSTAR_ON == y ]
-	then
-		sed -i "s/shopt -u globstar//g" minpkg
-	fi
 	if [ $DEFAULT_PREFIX != /usr ]
 	then
 		sed -i "s|--prefix=/usr|--prefix=$DEFAULT_PREFIX|g" minpkg
