@@ -38,44 +38,59 @@ do
 		echo -e "--pkgs-path=...\t\tIndique l'endroit où seront installés les packages"
 		echo -e "\t\t\t(valeur par défaut: /usr/pkgs)"
 		echo -e "--verbose (-v)\t\tAffiche plus d'informations sur les actions effectuées"
-		echo -e "\t\t\tpar défaut sur votre système"
+		echo -e "\t\t\tpar ce script"
 		echo -e "--without-installing\tCrée les dossiers de cache pour l'utilisateur,"
 		echo -e "\t\t\tmais n'installe pas minpkg"
 		echo -e "--without-root-cache\tNe crée pas de dossier de cache pour l'utilisateur root"
 		echo ""
 		exit
 		;;
-	
+
 	--default-prefix=*)
 		DEFAULT_PREFIX="${arg#*=}"
 		;;
-	
+
 	--install-path=*)
 		INSTALL_PATH="${arg#*=}"
 		;;
-	
+
 	--pkgs-path=* | --packages-path)
 		PKGS_PATH="${arg#*=}"
 		;;
-	
+
 	--verbose | -v)
 		VERBOSE='-v'
 		;;
-	
+
 	--without-installing)
 		INSTALL_MINPKG=n
 		;;
-	
+
 	--without-root-cache)
 		CREATE_ROOT_CACHE_DIR=n
 		;;
-	
+
 	*)
 		echo -e "\e[31mErreur!\e[0m Cette option ($arg) n'est pas supportée."
 		exit
 		;;
 	esac
 done
+
+echo -e "\n\e[1m\e[32m=== Installation de minpkg ===\e[0m\n"
+echo -e "\e[1mminpkg\e[0m sera installé sur ce système avec les options reçues en arguments par ce script."
+echo -e "Entrez $0 --help pour en connaître la liste."
+echo -e "\nConfirmez-vous l'installation? (y/n)"
+read input
+case input in
+oui | yes | o | y)
+	;;
+*)
+	echo -e "\e[31mInstallation annulée.\e[0m"
+	exit
+	;;
+esac
+echo ""
 
 # Vérifications:
 if [ $INSTALL_MINPKG == y ]

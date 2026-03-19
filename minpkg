@@ -289,7 +289,7 @@ function installer
 	none)
 		pkg="$1"
 	esac
-	
+
 	if [[ ! -v keep_source ]] && [[ "$archiver" != "none" ]]
 	then
 		rm "$1" #enlève l'archive du sandbox
@@ -335,7 +335,7 @@ function installer
 
 
 	#Problèmes de mise à jour:
-	if [[ -v keep_old ]]
+	if ! [[ -v keep_old ]]
 	then
 		#Cette même version est déjà installée:
 		if [[ -d "/usr/pkgs/$pkg_name/$pkg_version" ]]
@@ -649,7 +649,7 @@ function installer
 		bash -c "$test_cmd"
 		;;
 	esac
-	
+
 	if [[ $test_system != none ]] && ! [[ -v no_confirm ]]
 	then
 		echo -e "\nLes tests ont maintenant été exécutés.\nVoulez-vous poursuivre l'installation du package (y/n)?"
@@ -717,7 +717,7 @@ function installer
 		else
 			destdir_prefix="DESTDIR"
 		fi
-		
+
 		if ! $sudo make $destdir_prefix="/usr/pkgs/$pkg_name/$pkg_version" $install_cmd
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande d'installation a échoué!\nA-t-on installé toutes les dépendances du package?"
@@ -1526,7 +1526,7 @@ do
 			;;
 
 		--understand | --understanding | --comprendre | --fonctionnement)
-			echo "Fonctionnement général de minpkg"
+			echo "Fonctionnement général de minpkg, le package manager minimal"
 			echo "----------------------------------------------------------------------------------------------------------------------"
 			echo "Note: Ce texte n'a pas pour but de tout expliquer en détail, mais plutôt d'expliquer l'idée générale derrière minpkg."
 			echo "A jour pour la version 1.5"
