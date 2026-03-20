@@ -10,10 +10,9 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.0 #version du programme
+version=1.6.1 #version du programme
 
 #Options
-verbose=0 #indique au programme s'il doit garder la console clean ou pas
 build_system="make" #indique le build system à utiliser
 config_system="configure_full" #indique le système de configuration à utiliser
 test_system="none" #indique comment tester le package
@@ -28,7 +27,8 @@ to_be_restored=() #liste des packages à réparer
 versionnage=0 #indique au programme qu'une commande version(s) a été entrée (0, 1 ou 2)
 sudo="" #commande à utiliser pour obtenir les droits de superuser (vide si on est déjà root, sinon "sudo")
 
-#Autres variables (définies au besoin)
+#Autres variables (définies dans le script lorsque nécessaire)
+#verbose (indique au programme s'il doit afficher plus de détail dans la console)
 #keep_source (indique au programme de conserver une copie du package source)
 #no_build_dir (indique au programme s'il ne doit pas créer de dossier séparé pour construire le package)
 #simulation (indique au programme s'il doit s'arrêter juste avant l'installation)
@@ -50,19 +50,19 @@ unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtoo
 #Nettoyage du sandbox
 function clean_sandbox
 {
-	if [[ $verbose -eq 1 ]] && [[ -v no_cleaning ]]
+	if [[ -v verbose ]] && [[ -v no_cleaning ]]
 	then
 		echo "Aucun nettoyage de la sandbox."
 		return
 
-	elif [[ $verbose -eq 1 ]]
+	elif [[ -v verbose ]]
 	then
 		echo "Nettoyage du sandbox..."
 	fi
 
 	if ! [[ -v no_cleaning ]]
 	then
-		rm -rf ~/.cache/minpkg/sandbox/*
+		rm -rf $HOME/.cache/minpkg/sandbox/*
 	fi
 }
 
@@ -73,7 +73,7 @@ function make_links
 {
 	unset file
 
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo "Entrée dans $1..."
 	fi
@@ -146,7 +146,7 @@ function make_links
 				$sudo ln -s "/usr/pkgs/$pkg_name/$pkg_version/$file" "/$file"
 			fi
 
-		elif [[ $verbose -eq 1 ]] #type de fichier non reconnu (dossier vide 99.99% du temps...)
+		elif [[ -v verbose ]] #type de fichier non reconnu (dossier vide 99.99% du temps...)
 		then
 			echo -e "$file est probablement un dossier vide... Fichier ignoré."
 		fi
@@ -160,11 +160,11 @@ function remove_links
 {
 	unset file
 
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo "Entrée dans /$1..."
 	fi
-	echo -e "\nOuverture du dossier /$1..." >> ~/.cache/minpkg/uninstall.log
+	echo -e "\nOuverture du dossier /$1..." >> $HOME/.cache/minpkg/uninstall.log
 
 	for file in "/usr/pkgs/$pkg_name/$pkg_version/$1/"*
 	do
@@ -175,7 +175,7 @@ function remove_links
 			#si c'est un symlink vers un fichier dans le package ou si dans le package, ce symlink en est aussi un
 			#Cette gestion des "vrais" symlinks laisse un peu à désirer. Si quelque chose brise, il y a des chances que ce soit ici et à cause de ça...
 			then
-				echo "Suppression de /$file (symlink vers $(readlink /$file))." >> ~/.cache/minpkg/uninstall.log
+				echo "Suppression de /$file (symlink vers $(readlink /$file))." >> $HOME/.cache/minpkg/uninstall.log
 				if [[ ! -v dryrun ]]
 				then
 					$sudo rm "/$file"
@@ -187,7 +187,7 @@ function remove_links
 			if [[ $(find "/usr/pkgs/$pkg_name/" -mindepth 1 | wc -l) -eq 0 ]]
 			#le dossier est maintenant vide (compte le nombre de d'éléments contenus dans un dossier (récursivement))
 			then
-				echo "Suppression du dossier vide /$file." >> ~/.cache/minpkg/uninstall.log
+				echo "Suppression du dossier vide /$file." >> $HOME/.cache/minpkg/uninstall.log
 				if [[ ! -v dryrun ]]
 				then
 					$sudo rm -d "/$file"
@@ -207,7 +207,7 @@ function installer
 	clean_sandbox
 
 	#Verbosité:
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo "Installation de $1 avec $archiver, $config_system, $build_system et $install_system."
 		if [[ $test_system != none ]]
@@ -230,28 +230,28 @@ function installer
 		echo -e "\e[31mErreur!\e[0m $1 n'existe pas (no such file or directory).\nInstallation \e[31mannulée\e[0m.\n"
 		return
 	else
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Copie du package dans la sandbox..."
 		fi
-		cp -r "$1" ~/.cache/minpkg/sandbox/
-		cd ~/.cache/minpkg/sandbox/
+		cp -r "$1" $HOME/.cache/minpkg/sandbox/
+		cd $HOME/.cache/minpkg/sandbox/
 	fi
 
 
 	#Création d'un log d'installation:
-	echo -e "Log d'installation de minpkg.\n" > ~/.cache/minpkg/install.log
-	echo "Source: $1" >> ~/.cache/minpkg/install.log
-	echo -e "Archiveur: $archiver\nConfig system: $config_system\nTest system: $test_system" >> ~/.cache/minpkg/install.log
-	echo -e "Build system: $build_system\nInstall system: $install_system" >> ~/.cache/minpkg/install.log
-	echo -e "Simulation: $simulation\n" >> ~/.cache/minpkg/install.log
+	echo -e "Log d'installation de minpkg.\n" > $HOME/.cache/minpkg/install.log
+	echo "Source: $1" >> $HOME/.cache/minpkg/install.log
+	echo -e "Archiveur: $archiver\nConfig system: $config_system\nTest system: $test_system" >> $HOME/.cache/minpkg/install.log
+	echo -e "Build system: $build_system\nInstall system: $install_system" >> $HOME/.cache/minpkg/install.log
+	echo -e "Simulation: $simulation\n" >> $HOME/.cache/minpkg/install.log
 
 
 	#Décompression du package:
 	archive_name="$1"
 	case $archiver in
 	tar)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Décompression du tarball..."
 		fi
@@ -269,7 +269,7 @@ function installer
 		;;
 
 	zip)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Décompression du zipfile..."
 		fi
@@ -295,24 +295,24 @@ function installer
 		rm "$1" #enlève l'archive du sandbox
 	fi
 	cd "$pkg"
-	echo "Package décompressé en $pkg, placé dans la sandbox." >> ~/.cache/minpkg/install.log
+	echo "Package décompressé en $pkg, placé dans la sandbox." >> $HOME/.cache/minpkg/install.log
 
 
 	#Prise en note de quelques informations:
 	if [[ -d .minpkg ]] && [[ -f .minpkg/name.minpkg ]] && [[ -f .minpkg/version.minpkg ]]
 	then
-		echo "Lecture des informations du package depuis ses fichiers dans .minpkg/..." >> ~/.cache/minpkg/install.log
+		echo "Lecture des informations du package depuis ses fichiers dans .minpkg/..." >> $HOME/.cache/minpkg/install.log
 		pkg_name="$(cat .minpkg/name.minpkg)"
 		pkg_version="$(cat .minpkg/version.minpkg)"
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Lecture des informations du package..."
 		fi
 		if [[ -f .minpkg/description.minpkg ]]
 		then
 			pkg_descr="$(cat .minpkg/description.minpkg)"
-			echo "Description: pkg_descr" >> ~/.cache/minpkg/install.log
-			if [[ $verbose -eq 1 ]]
+			echo "Description: pkg_descr" >> $HOME/.cache/minpkg/install.log
+			if [[ -v verbose ]]
 			then
 				echo "Description: $pkg_descr"
 			fi
@@ -331,7 +331,7 @@ function installer
 		echo -e "Installation \e[31mannulée\e[0m.\n"
 		return
 	fi
-	echo -e "\nNom du package: $pkg_name\nVersion: $pkg_version\n" >> ~/.cache/minpkg/install.log
+	echo -e "\nNom du package: $pkg_name\nVersion: $pkg_version\n" >> $HOME/.cache/minpkg/install.log
 
 
 	#Problèmes de mise à jour:
@@ -363,10 +363,10 @@ function installer
 		then
 			to_be_uninstalled="$pkg_name"
 			version_to_be_uninstalled="$(cat /usr/pkgs/$pkg_name/.version)"
-			echo "L'ancienne version $version_to_be_uninstalled de $pkg_name sera supprimée après l'installation." >> ~/.cache/minpkg/install.log
+			echo "L'ancienne version $version_to_be_uninstalled de $pkg_name sera supprimée après l'installation." >> $HOME/.cache/minpkg/install.log
 			echo "La version $version_to_be_uninstalled de $pkg_name est présentement utilisée sur ce système."
 			echo -e "$pkg_name sera maintenant \e[36mmis à jour\e[0m à la version $pkg_version."
-			if [[ $verbose -eq 1 ]]
+			if [[ -v verbose ]]
 			then
 				echo "Les versions suivantes de ce package sont déjà installées par minpkg:"
 				echo "$(ls /usr/pkgs/$pkg_name)"
@@ -382,9 +382,9 @@ function installer
 	#On a le droit d'accumuler plusieurs versions:
 	#(on va juste les accumuler et changer les symlinks de ce qu'elles ont en commun):
 	else
-		echo "Les versions précédentes (s'il y en a) seront conservées." >> ~/.cache/minpkg/install.log
+		echo "Les versions précédentes (s'il y en a) seront conservées." >> $HOME/.cache/minpkg/install.log
 		echo ""
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Les versions précédentes (s'il y en a) seront conservées."
 		fi
@@ -417,7 +417,7 @@ function installer
 	then
 		mkdir build
 		cd build
-		echo "Création d'un dossier de build..." >> ~/.cache/minpkg/install.log
+		echo "Création d'un dossier de build..." >> $HOME/.cache/minpkg/install.log
 	fi
 
 
@@ -434,7 +434,7 @@ function installer
 			shopt -s globstar nullglob
 			touch aclocal.m4 configure config.h.in **/stamp-h* **/Makefile.am **/Makefile.in config.status **/Makefile
 		)
-		echo "Correction du \"bug\" d'autoconf..." > ~/.cache/minpkg/install.log
+		echo "Correction du \"bug\" d'autoconf..." > $HOME/.cache/minpkg/install.log
 	fi
 
 
@@ -447,7 +447,7 @@ function installer
 
 	case $config_system in
 	configure | configure_full)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "Configuration du package avec configure...\n"
 		fi
@@ -457,7 +457,7 @@ function installer
 			then
 				echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nY a-t-il vraiment un script nommé configure ici?"
 				echo "Installation annulée."
-				echo "Erreur fatale lors de la configuration." >> ~/.cache/minpkg/install.log
+				echo "Erreur fatale lors de la configuration." >> $HOME/.cache/minpkg/install.log
 				return;
 			fi
 		else #depuis un dossier de build
@@ -465,15 +465,15 @@ function installer
 			then
 				echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nY a-t-il vraiment un script nommé configure ici?"
 				echo "Installation annulée."
-				echo "Erreur fatale lors de la configuration." >> ~/.cache/minpkg/install.log
+				echo "Erreur fatale lors de la configuration." >> $HOME/.cache/minpkg/install.log
 				return;
 			fi
 		fi
-		echo "Package configuré avec ./configure --prefix=/usr $CONFIGURE_ARGS..." >> ~/.cache/minpkg/install.log
+		echo "Package configuré avec ./configure --prefix=/usr $CONFIGURE_ARGS..." >> $HOME/.cache/minpkg/install.log
 		;;
 
 	cmake)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "Configuration du package avec cmake...\n"
 		fi
@@ -483,7 +483,7 @@ function installer
 			then
 				echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment cmake?"
 				echo "Installation annulée."
-				echo "Erreur fatale lors de la configuration." >> ~/.cache/minpkg/install.log
+				echo "Erreur fatale lors de la configuration." >> $HOME/.cache/minpkg/install.log
 				return;
 			fi
 		else #depuis un dossier de build
@@ -491,15 +491,15 @@ function installer
 			then
 				echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment cmake?"
 				echo "Installation annulée."
-				echo "Erreur fatale lors de la configuration." >> ~/.cache/minpkg/install.log
+				echo "Erreur fatale lors de la configuration." >> $HOME/.cache/minpkg/install.log
 				return;
 			fi
 		fi
-		echo -e "Package configuré avec cmake . --install-prefix /usr $CONFIGURE_ARGS...\n" >> ~/.cache/minpkg/install.log
+		echo -e "Package configuré avec cmake . --install-prefix /usr $CONFIGURE_ARGS...\n" >> $HOME/.cache/minpkg/install.log
 		;;
 
 	meson)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "Configuration du package avec meson setup...\n"
 		fi
@@ -511,14 +511,14 @@ function installer
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment meson?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de la configuration." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de la configuration." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
-		echo -e "Package configuré avec meson setup --prefix=/usr --buildtype=release $CONFIGURE_ARGS...\n" >> ~/.cache/minpkg/install.log
+		echo -e "Package configuré avec meson setup --prefix=/usr --buildtype=release $CONFIGURE_ARGS...\n" >> $HOME/.cache/minpkg/install.log
 		;;
 
 	perl) #sera probablement retiré un jour...
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "Configuration du package avec perl...\n"
 		fi
@@ -526,10 +526,10 @@ function installer
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment perl pour sa configuration?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de la configuration." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de la configuration." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
-		echo "Package configuré avec perl $CONFIGURE_ARGS..." >> ~/.cache/minpkg/install.log
+		echo "Package configuré avec perl $CONFIGURE_ARGS..." >> $HOME/.cache/minpkg/install.log
 		;;
 
 	ask)
@@ -541,20 +541,20 @@ function installer
 			echo -e "\nAppuyez sur Enter pour continuer l'installation."
 			read input
 		fi
-		echo "Package configuré avec $config_cmd..." >> ~/.cache/minpkg/install.log
+		echo "Package configuré avec $config_cmd..." >> $HOME/.cache/minpkg/install.log
 		;;
 	esac
-	echo "Package configuré." >> ~/.cache/minpkg/install.log
+	echo "Package configuré." >> $HOME/.cache/minpkg/install.log
 	if [[ $config_system == none ]]
 	then
-		echo "Aucune configuration à faire." >> ~/.cache/minpkg/install.log
+		echo "Aucune configuration à faire." >> $HOME/.cache/minpkg/install.log
 	fi
 
 
 	#Compilation du package:
 	case $build_system in
 	make | make_html)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "\nCompilation du package avec make...\n"
 		fi
@@ -563,7 +563,7 @@ function installer
 			echo -e "\n\e[31mErreur!\e[0m La commande de build a échoué!"
 			echo -e "Y a-t-il vraiment un makefile ici?\nA-t-on installées toutes les dépendances?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de la compilation/construction." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de la compilation/construction." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
 		if [[ $build_system == make_html ]] && ! make html
@@ -571,13 +571,13 @@ function installer
 			echo -e "\n\e[31mErreur!\e[0m make html a échoué!"
 			echo -e "A-t-on installées toutes les dépendances?"
 			echo "Installation de la documentation annulée."
-			echo "Erreur fatale lors de la construction de la documentation (make html)." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de la construction de la documentation (make html)." >> $HOME/.cache/minpkg/install.log
 			#erreur non fatale
 		fi
 		;;
 
 	ninja)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "\nCompilation du package avec ninja...\n"
 		fi
@@ -586,13 +586,13 @@ function installer
 			echo -e "\n\e[31mErreur!\e[0m La commande de build a échoué!"
 			echo -e "Ce package utilise-t-il vraiment ninja?\nA-t-on installées toutes les dépendances?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de la compilation/construction." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de la compilation/construction." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
 		;;
 
 	pip3)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo -e "\nCreation de l'archive wheel avec pip3...\n"
 		fi
@@ -601,7 +601,7 @@ function installer
 			echo -e "\n\e[31mErreur!\e[0m La commande de build a échoué!"
 			echo -e "Ce package utilise-t-il vraiment pip3?\nA-t-on installées toutes les dépendances?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de la compilation/construction." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de la compilation/construction." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
 		;;
@@ -617,16 +617,16 @@ function installer
 		fi
 		;;
 	esac
-	
-	echo "Package compilé/construit avec $build_system." >> ~/.cache/minpkg/install.log
+
+	echo "Package compilé/construit avec $build_system." >> $HOME/.cache/minpkg/install.log
 	if [[ $build_system == none ]]
 	then
-		echo "Aucune compilation/construction à faire." >> ~/.cache/minpkg/install.log
+		echo "Aucune compilation/construction à faire." >> $HOME/.cache/minpkg/install.log
 	fi
 
 
 	#Exécution des tests du package:
-	if [[ $verbose -eq 1 && $test_system != none ]]
+	if [[ -v verbose && $test_system != none ]]
 	then
 		echo -e "\nLes tests du package seront maintenant exécutés:\n"
 	fi
@@ -661,10 +661,10 @@ function installer
 			return
 		fi
 	fi
-	echo "Tests terminés." >> ~/.cache/minpkg/install.log
+	echo "Tests terminés." >> $HOME/.cache/minpkg/install.log
 	if [[ $test_system == none ]]
 	then
-		echo "Aucun test à faire." >> ~/.cache/minpkg/install.log
+		echo "Aucun test à faire." >> $HOME/.cache/minpkg/install.log
 	fi
 
 
@@ -682,12 +682,12 @@ function installer
 	#Création des dossiers nécessaires en /usr/pkgs/:
 	if [[ $build_system != pip3 ]]
 	then
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Création du dossier /usr/pkgs/$pkg_name/$pkg_version/ (s'il n'existe pas déjà)..."
 		fi
 		$sudo mkdir -p "/usr/pkgs/$pkg_name/$pkg_version"
-		echo "Dossier créé en /usr/pkgs/..." >> ~/.cache/minpkg/install.log
+		echo "Dossier créé en /usr/pkgs/..." >> $HOME/.cache/minpkg/install.log
 	fi
 
 
@@ -698,7 +698,7 @@ function installer
 	fi
 	case $install_system in
 	make | make_html | make_prefix)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Installation du package avec make DESTDIR=... install..."
 		fi
@@ -722,19 +722,19 @@ function installer
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande d'installation a échoué!\nA-t-on installé toutes les dépendances du package?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de l'installation." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de l'installation." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
 		if [[ $build_system == make_html ]] && ! $sudo make DESTDIR="/usr/pkgs/$pkg_name/$pkg_version" install-html
 		then
 			echo -e "\n\e[31mErreur!\e[0m make install-html a échoué!\nA-t-on installé toutes les dépendances du package?"
 			echo "Installation de la documentation annulée."
-			echo "Erreur lors de l'installation de la documentation." >> ~/.cache/minpkg/install.log
+			echo "Erreur lors de l'installation de la documentation." >> $HOME/.cache/minpkg/install.log
 		fi
 		;;
 
 	ninja)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Installation du package avec DESTDIR=... ninja install..."
 		fi
@@ -749,14 +749,14 @@ function installer
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande d'installation a échoué!\nA-t-on installé toutes les dépendances du package?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de l'installation." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de l'installation." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
 		unset DESTDIR
 		;;
 
 	pip3)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Installation du package avec pip3..."
 		fi
@@ -764,7 +764,7 @@ function installer
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande d'installation a échoué!\nA-t-on installé toutes les dépendances du package?"
 			echo "Installation annulée."
-			echo "Erreur fatale lors de l'installation." >> ~/.cache/minpkg/install.log
+			echo "Erreur fatale lors de l'installation." >> $HOME/.cache/minpkg/install.log
 			return;
 		fi
 		;;
@@ -776,7 +776,7 @@ function installer
 		;;
 
 	none)
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Déplacement du package dans son répertoire d'installation..."
 		fi
@@ -785,7 +785,7 @@ function installer
 		$sudo mv "$pkg" "/usr/pkgs/$pkg_name/$pkg_version"
 		;;
 	esac
-	echo "Package installé en /usr/pkgs/$pkg_name/$pkg_version/." >> ~/.cache/minpkg/install.log
+	echo "Package installé en /usr/pkgs/$pkg_name/$pkg_version/." >> $HOME/.cache/minpkg/install.log
 
 
 	#Suppression des bibliotheques statiques et des archives libtool:
@@ -796,20 +796,20 @@ function installer
 			shopt -s globstar nullglob
 			if [ -e "/usr/pkgs/$pkg_name/$pkg_version/"**/*.a ]
 			then
-				if [[ $verbose -eq 1 ]]
+				if [[ -v verbose ]]
 				then
 					echo "Suppression des bibliotheques statiques..."
 				fi
-				echo "Suppression des bibliotheques statiques..." >> ~/.cache/minpkg/install.log
+				echo "Suppression des bibliotheques statiques..." >> $HOME/.cache/minpkg/install.log
 				rm "/usr/pkgs/$pkg_name/$pkg_version/"**/*.a
 			fi
 			if [[ -e "/usr/pkgs/$pkg_name/$pkg_version/"**/*.la ]]
 			then
-				if [[ $verbose -eq 1 ]]
+				if [[ -v verbose ]]
 				then
 					echo "Suppression des fichiers d'archive libtool..."
 				fi
-				echo "Suppression des fichiers d'archive libtool..." >> ~/.cache/minpkg/install.log
+				echo "Suppression des fichiers d'archive libtool..." >> $HOME/.cache/minpkg/install.log
 				rm "/usr/pkgs/$pkg_name/$pkg_version/"**/*.la
 			fi
 		)
@@ -823,32 +823,34 @@ function installer
 		do
 			if [[ -d "$dir" ]]
 			then
-				make_links "$(basename $dir)" ~/.cache/minpkg/install.log
+				make_links "$(basename $dir)" $HOME/.cache/minpkg/install.log
 			fi
 		done
-		echo -e "\nInstallation Terminée!" >> ~/.cache/minpkg/install.log
+		echo -e "\nInstallation Terminée!" >> $HOME/.cache/minpkg/install.log
 	fi
 
 
 	#Copie de la source:
 	if [[ -v keep_source ]]
 	then
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Création d'une copie d'archive du package source..."
 		fi
 		if [[ $archiver == none ]]
 		then
-			tar --create "~/.cache/minpkg/sandbox/$archive_name" --file "~/.cache/minpkg/sandbox/$archive_name.tar"
+			pushd $HOME/.cache/minpkg/sandbox >> /dev/null
+			tar --create "$archive_name" --file "$archive_name.tar"
 			archive_name="$archive_name.tar"
+			popd >> /dev/null
 		fi
-		mv ~/.cache/minpkg/sandbox/"$archive_name" ~/.cache/minpkg/sources/"$archive_name"
+		mv $HOME/.cache/minpkg/sandbox/"$archive_name" $HOME/.cache/minpkg/sources/"$archive_name"
 			# \-> cette ligne m'a fait chier profondément pendant un bon 20 min...
 		if [[ $(id -u) -eq 0 ]]
 		then
 			echo "/root/.cache/minpkg/sources/$archive_name" > "/usr/pkgs/$pkg_name/$pkg_version/source.minpkg"
 		else
-			$sudo echo "/home/$(id -u -n)/.cache/minpkg/sources/$archive_name" > "/usr/pkgs/$pkg_name/$pkg_version/source.minpkg"
+			echo "/home/$(id -u -n)/.cache/minpkg/sources/$archive_name" | sudo tee "/usr/pkgs/$pkg_name/$pkg_version/source.minpkg" > /dev/null
 		fi
 	fi
 
@@ -858,10 +860,10 @@ function installer
 	if [[ -v to_be_uninstalled ]]
 	then
 		pkg_version_temp="$pkg_version"
-		echo "Désinstallation de l'ancienne version du package..." >> ~/.cache/minpkg/install.log
-		echo "Consultez ~/.cache/minpkg/uninstall.log pour voir le log de désinstallation." >> ~/.cache/minpkg/install.log
-		echo -e "\e[93mAttention!\e[0m Ce fichier sera remplacé à la prochaine désinstallation." >> ~/.cache/minpkg/install.log
-		if [[ $verbose -eq 1 ]]
+		echo "Désinstallation de l'ancienne version du package..." >> $HOME/.cache/minpkg/install.log
+		echo "Consultez $HOME/.cache/minpkg/uninstall.log pour voir le log de désinstallation." >> $HOME/.cache/minpkg/install.log
+		echo -e "\e[93mAttention!\e[0m Ce fichier sera remplacé à la prochaine désinstallation." >> $HOME/.cache/minpkg/install.log
+		if [[ -v verbose ]]
 		then
 			echo "Suppression de l'ancienne version de $pkg_name..."
 		fi
@@ -875,7 +877,7 @@ function installer
 	if [[ $build_system == pip3 ]]
 	then
 		echo ""
-		cd ~/.cache/minpkg/
+		cd $HOME/.cache/minpkg/
 		pip3 show $pkg_name
 		echo -e "\n$pkg_name a été installé avec pip3, ce qui signifie qu'il ne se trouve pas dans la base de données de minpkg."
 		echo "Utilisez pip3 pour le gérer, le mettre à jour ou le désinstaller."
@@ -883,12 +885,12 @@ function installer
 	else
 		echo -e "Installed $(date)\nBy $(id -u -n)\n" > "/usr/pkgs/$pkg_name/$pkg_version/infos.minpkg"
 		echo -e "Config: $config_system\nBuild: $build_system\nTests: $test_system\nInstall: $install_system" >> "/usr/pkgs/$pkg_name/$pkg_version/infos.minpkg"
-		$sudo cp ~/.cache/minpkg/install.log "/usr/pkgs/$pkg_name/$pkg_version/install.log"
+		$sudo cp $HOME/.cache/minpkg/install.log "/usr/pkgs/$pkg_name/$pkg_version/install.log"
 		if [[ -v pkg_descr ]]
 		then
-			$sudo echo "$pkg_descr" > "/usr/pkgs/$pkg_name/.description"
+			echo "$pkg_descr" | $sudo tee "/usr/pkgs/$pkg_name/.description" > /dev/null
 		fi
-		$sudo echo "$pkg_version" > "/usr/pkgs/$pkg_name/.version"
+		echo "$pkg_version" | $sudo tee "/usr/pkgs/$pkg_name/.version" > /dev/null
 	fi
 }
 
@@ -934,7 +936,7 @@ function uninstaller ()
 
 
 	#Verbosité:
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo -e "Désinstallation de $pkg_name, version $pkg_version."
 		if [[ -v simulation ]] || [[ -v dryrun ]]
@@ -965,7 +967,7 @@ function uninstaller ()
 	if [[ -v simulation ]]
 	then
 		echo "Vous ne pouvez pas simuler la désinstallation d'un package."
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Si vous tenez vraiment à le faire, essayez de faire un --dryrun, à la place..."
 		fi
@@ -975,18 +977,18 @@ function uninstaller ()
 
 
 	#Log:
-	echo "Désinstallation de la version $pkg_version de $pkg_name." > ~/.cache/minpkg/uninstall.log
+	echo "Désinstallation de la version $pkg_version de $pkg_name." > $HOME/.cache/minpkg/uninstall.log
 	if [[ -v dryrun ]]
 	then
-		echo "dryrun: OUI" >> ~/.cache/minpkg/uninstall.log
+		echo "dryrun: OUI" >> $HOME/.cache/minpkg/uninstall.log
 	else
-		echo "dryrun: NON" >> ~/.cache/minpkg/uninstall.log
+		echo "dryrun: NON" >> $HOME/.cache/minpkg/uninstall.log
 	fi
-	echo -e "\nSuppression des symlinks..." >> ~/.cache/minpkg/uninstall.log
+	echo -e "\nSuppression des symlinks..." >> $HOME/.cache/minpkg/uninstall.log
 
 
 	#Supression des symlinks:
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo -e "Suppression des symlinks...\n"
 	fi
@@ -1012,16 +1014,16 @@ function uninstaller ()
 		if [[ $input == yes ]] || [[ $input == y ]] || [[ $input == oui ]] || [[ $input == o ]]
 		then
 			rm $(cat "/usr/pkgs/$pkg_name/$pkg_version/source.minpkg")
-			echo "Archive source supprimée." >> ~/.cache/minpkg/uninstall.log
+			echo "Archive source supprimée." >> $HOME/.cache/minpkg/uninstall.log
 		fi
 	fi
 
 	#Supression de la version du package:
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo -e "\nSuppression de cette version du package..."
 	fi
-	echo -e "\nSuppression de la version $pkg_version du package $pkg_name..." >> ~/.cache/minpkg/uninstall.log
+	echo -e "\nSuppression de la version $pkg_version du package $pkg_name..." >> $HOME/.cache/minpkg/uninstall.log
 	if [[ ! -v dryrun ]]
 	then
 		$sudo rm -r "/usr/pkgs/$pkg_name/$pkg_version"
@@ -1031,8 +1033,8 @@ function uninstaller ()
 	#Ajustement du package:
 	if [[ $(find "/usr/pkgs/$pkg_name" -maxdepth 1 -mindepth 1 -type d | wc -l) -eq 0 ]] #aucune autre version installée
 	then
-		echo -e "Aucune autre version disponible.\nSuppression du package au complet..." >> ~/.cache/minpkg/uninstall.log
-		if [[ $verbose -eq 1 ]]
+		echo -e "Aucune autre version disponible.\nSuppression du package au complet..." >> $HOME/.cache/minpkg/uninstall.log
+		if [[ -v verbose ]]
 		then
 			echo "Aucune autre version de $pkg_name n'est présentement installée."
 			echo "Suppression du package de la base de données de minpkg..."
@@ -1044,9 +1046,9 @@ function uninstaller ()
 
 	elif [[ $(find "/usr/pkgs/$pkg_name" -maxdepth 1 -mindepth 1 -type d | wc -l) -eq 1 ]] #1 seule autre version installée
 	then
-		echo "Une seule autre version du package disponible (version $(ls /usr/pkgs/$pkg_name))." >> ~/.cache/minpkg/uninstall.log
-		echo "Mise à jour du fichier .version..." >> ~/.cache/minpkg/uninstall.log
-		if [[ $verbose -eq 1 ]]
+		echo "Une seule autre version du package disponible (version $(ls /usr/pkgs/$pkg_name))." >> $HOME/.cache/minpkg/uninstall.log
+		echo "Mise à jour du fichier .version..." >> $HOME/.cache/minpkg/uninstall.log
+		if [[ -v verbose ]]
 		then
 			echo "Une seule autre version de $pkg_name est présentement installée (v$(ls /usr/pkgs/$pkg_name))."
 			echo "Mise à jour de la base de données de minpkg."
@@ -1078,10 +1080,10 @@ function uninstaller ()
 				input="INPUT"
 			fi
 		done
-		echo "Nouvelle version utilisée: $input" >> ~/.cache/minpkg/uninstall.log
+		echo "Nouvelle version utilisée: $input" >> $HOME/.cache/minpkg/uninstall.log
 		if [[ ! -v dryrun ]]
 		then
-			$sudo echo "$input" > "/usr/pkgs/$pkg_name/.version"
+			echo "$input" | $sudo tee "/usr/pkgs/$pkg_name/.version" > /dev/null
 		fi
 		if [[ ! -v to_be_installed ]] #ceci n'est donc pas une mise à jour
 		then
@@ -1092,9 +1094,9 @@ function uninstaller ()
 		fi
 
 	else #plusieurs versions installées, mais on n'a pas supprimée celle dans .version
-		echo "Plusieurs autres versions installées, mais celle supprimée n'est pas celle dans .version." >> ~/.cache/minpkg/uninstall.log
-		echo "Aucune mise à jour nécessaire." >> ~/.cache/minpkg/uninstall.log
-		if [[ $verbose -eq 1 ]]
+		echo "Plusieurs autres versions installées, mais celle supprimée n'est pas celle dans .version." >> $HOME/.cache/minpkg/uninstall.log
+		echo "Aucune mise à jour nécessaire." >> $HOME/.cache/minpkg/uninstall.log
+		if [[ -v verbose ]]
 		then
 			echo "Plusieurs autres versions installées, mais celle supprimée n'est pas celle dans .version."
 			echo "Aucune mise à jour nécessaire."
@@ -1125,13 +1127,13 @@ function restore
 	elif [[ $(find "/usr/pkgs/$pkg_name/" -maxdepth 1 -mindepth 1 -type d | wc -l) -gt 1 ]] #plus d'une version installée
 	then
 		echo "Plusieurs versions de $pkg_name sont présentement installées sur ce système."
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "$(minpkg versions $pkg_name)"
 		fi
 		echo "La version $(cat /usr/pkgs/$pkg_name/.version) est présentement en usage."
 		echo -e "\nLa version que vous choisirez de réparer sera celle en usage après la réparation."
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Notez qu'en cas de conflit de version subtil, des modifications manuelles SERONT nécessaires"
 			echo "  pour que les différentes versions puissent cohabiter."
@@ -1148,7 +1150,7 @@ function restore
 		fi
 	else #1 seule version installée
 		pkg_version="$(ls /usr/pkgs/$pkg_name)"
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Une seule version de $pkg_name détectée (version $pkg_version)."
 		fi
@@ -1156,7 +1158,7 @@ function restore
 
 
 	#Verbosité:
-	if [[ $verbose -eq 1 ]]
+	if [[ -v verbose ]]
 	then
 		echo -e "\nRéparation de $pkg_name, version $pkg_version."
 		if [[ -v simulation ]]
@@ -1186,7 +1188,7 @@ function restore
 	if [[ -v simulation ]]
 	then
 		echo "Vous ne pouvez pas simuler la réparation d'un package."
-		if [[ $verbose -eq 1 ]]
+		if [[ -v verbose ]]
 		then
 			echo "Si vous tenez vraiment à le faire, essayez de faire un --dryrun, à la place..."
 		fi
@@ -1196,10 +1198,10 @@ function restore
 
 
 	#Log:
-	echo -e "Réparation de la version $pkg_version de $pkg_name.\n" > ~/.cache/minpkg/repair.log
-	echo "Version précédemment en usage: $(cat /usr/pkgs/$pkg_name/.version)" >> ~/.cache/minpkg/repair.log
-	echo -e "Versions installées:\n$(ls /usr/pkgs/$pkg_name)\n" >> ~/.cache/minpkg/repair.log
-	echo "Recréation des symlinks..." >> ~/.cache/minpkg/repair.log
+	echo -e "Réparation de la version $pkg_version de $pkg_name.\n" > $HOME/.cache/minpkg/repair.log
+	echo "Version précédemment en usage: $(cat /usr/pkgs/$pkg_name/.version)" >> $HOME/.cache/minpkg/repair.log
+	echo -e "Versions installées:\n$(ls /usr/pkgs/$pkg_name)\n" >> $HOME/.cache/minpkg/repair.log
+	echo "Recréation des symlinks..." >> $HOME/.cache/minpkg/repair.log
 
 
 	#Recréation des symlinks:
@@ -1207,15 +1209,15 @@ function restore
 	do
 		if [[ -d "$dir" ]]
 		then
-			make_links "$(basename $dir)" ~/.cache/minpkg/repair.log
+			make_links "$(basename $dir)" $HOME/.cache/minpkg/repair.log
 		fi
 	done
-	echo -e "\nPackage réparé." >> ~/.cache/minpkg/repair.log
+	echo -e "\nPackage réparé." >> $HOME/.cache/minpkg/repair.log
 
 
-	#Mise à jour du .version et copie du restore.log:
-	$sudo echo "$pkg_version" > "/usr/pkgs/$pkg_name/.version"
-	$sudo cp ~/.cache/minpkg/repair.log "/usr/pkgs/$pkg_name/$pkg_version/"
+	#Mise à jour du .version et copie du repair.log:
+	echo "$pkg_version" | $sudo tee "/usr/pkgs/$pkg_name/.version" > /dev/null
+	$sudo cp $HOME/.cache/minpkg/repair.log "/usr/pkgs/$pkg_name/$pkg_version/"
 }
 
 
@@ -1476,7 +1478,7 @@ do
 			echo -e "--simulate (-s)\texécute la commande spécifiée sans altérer le système"
 			echo -e "--understand\taffiche un petit texte expliquant les grandes lignes"
 			echo -e "\t\tdu fonctionnement de minpkg"
-			echo -e "--verbose (-v)\taffiche plus détails"
+			echo -e "--verbose (-v)\taffiche plus de détails"
 			echo -e "--version (-V)\taffiche la version de ce programme"
 
 			echo -e "\nOptions d'installation:"
@@ -1511,17 +1513,16 @@ do
 			echo -e "--latest\trépare la version présentement en usage"
 
 			echo -e "\nOptions de débogage (non recommandées):"
-			echo -e "--dryrun\tn'effectue aucune opération sur les symlinks dans /usr"
+			echo -e "--dryrun\tn'effectue aucune modification ayant un impact sur le système"
 			echo -e "--insecure\tdemande la permission avant de modifier quelque chose dans /usr"
-			echo -e "\t\t(implique --verbose)"
+			echo -e "\t\t(implique --verbose et est incompatible avec --no-confirm)"
 			echo -e "--no-cleaning\tne nettoie pas la sandbox derrière lui"
-			echo -e "\t\t(doit être combiné à install)"
+			echo -e "\t\t(ne s'applique qu'avec la commande install)"
 
 			echo -e "\nVous pouvez exécuter minpkg en tant que root ou bien en tant qu'utilisateur"
 			echo -e "  ordinaire."
 			echo -e "Si vous exécutez minpkg en tant qu'utilisateur normal,"
-			echo -e "  l'installation/désinstallation sera tout de même effectuée en tant que root"
-			echo -e "  (via des commandes appelant sudo à l'interne).\n"
+			echo -e "  minpkg utilisera sudo pour obtenir les privilèges nécessaires au besoin.\n"
 			exit
 			;;
 
@@ -1714,6 +1715,12 @@ do
 			#Pour les personnes insécures dans la vie...
 			insecure=1
 			verbose=1
+			if [[ -v no_confirm ]]
+			then
+				echo "--no_confirm est incompatible avec --insecure!"
+				echo "Désactivation de --no_confirm..."
+				unset no_confirm;
+			fi
 			;;
 
 		--install | --installation | --installer | --installeur | -i)
@@ -1747,6 +1754,12 @@ do
 
 		--no-confirm)
 			no_confirm=1
+			if [[ -v insecure ]]
+			then
+				echo "--no_confirm est incompatible avec --insecure!"
+				echo "Désactivation de --no_confirm..."
+				unset no_confirm;
+			fi
 			;;
 
 		--no-strip)
@@ -1796,7 +1809,7 @@ do
 			;;
 
 		list | liste | ls) #ll est préalablement transformé en -v ls
-			if [[ $verbose -eq 1 ]]
+			if [[ -v verbose ]]
 			then
 				echo -e "$(ls -A1 /usr/pkgs/ | wc -l) packages installés:\n"
 				minpkg version $(minpkg list)
