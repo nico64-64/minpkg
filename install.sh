@@ -11,6 +11,7 @@ PKGS_PATH=/usr/pkgs
 INSTALL_MINPKG=y
 DEFAULT_PREFIX=/usr
 INSTALL_KRNLUPD=y
+SYS_CONF_DIR=/etc
 
 
 # Sommes-nous root?
