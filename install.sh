@@ -10,6 +10,7 @@ CREATE_ROOT_CACHE_DIR=y
 PKGS_PATH=/usr/pkgs
 INSTALL_MINPKG=y
 DEFAULT_PREFIX=/usr
+INSTALL_KRNLUPD=y
 
 
 # Sommes-nous root?
@@ -27,7 +28,7 @@ do
 		echo "=== install.sh ==="
 		echo "Script d'installation de minpkg."
 		echo ""
-		echo "Vous n'êtes pas obligé d'utiliser ce script, mais il vous facilitera la vie."
+		echo "Vous n'êtes pas obligé d'utiliser ce script, mais il vous facilitera beaucoup la vie."
 		echo ""
 		echo "Voici les options que peut accepter ce script:"
 		echo -e "--help (-h / -?)\tAffiche ce texte"
@@ -37,10 +38,14 @@ do
 		echo -e "\t\t\t(valeur par défaut: /usr/bin)"
 		echo -e "--pkgs-path=...\t\tIndique l'endroit où seront installés les packages"
 		echo -e "\t\t\t(valeur par défaut: /usr/pkgs)"
+		echo -e "--sysconfdir=...\tIndique l'endroit où seront placés les fichiers de"
+		echo -e "\t\t\tconfiguration de minpkg (valeur par défaut: /etc)"
 		echo -e "--verbose (-v)\t\tAffiche plus d'informations sur les actions effectuées"
 		echo -e "\t\t\tpar ce script"
 		echo -e "--without-installing\tCrée les dossiers de cache pour l'utilisateur,"
-		echo -e "\t\t\tmais n'installe pas minpkg"
+		echo -e "\t\t\tmais n'installe pas minpkg (implique --without-krnlupd)"
+		echo -e "--without-krnlupd\tN'installe pas krnlupd, l'outil de mise à jour du kernel"
+		echo -e "\t\t\tde minpkg"
 		echo -e "--without-root-cache\tNe crée pas de dossier de cache pour l'utilisateur root"
 		echo ""
 		exit
@@ -54,8 +59,12 @@ do
 		INSTALL_PATH="${arg#*=}"
 		;;
 
-	--pkgs-path=* | --packages-path)
+	--pkgs-path=* | --packages-path=*)
 		PKGS_PATH="${arg#*=}"
+		;;
+
+	--sysconfdir=*)
+		SYS_CONF_DIR="${arg#*=}"
 		;;
 
 	--verbose | -v)
@@ -64,6 +73,11 @@ do
 
 	--without-installing)
 		INSTALL_MINPKG=n
+		INSTALL_KRNLUPD=n
+		;;
+
+	--without-krnlupd)
+		INSTALL_KRNLUPD=n
 		;;
 
 	--without-root-cache)
@@ -82,7 +96,7 @@ echo -e "\e[1mminpkg\e[0m sera installé sur ce système avec les options reçue
 echo -e "Entrez $0 --help pour en connaître la liste."
 echo -e "\nConfirmez-vous l'installation? (y/n)"
 read input
-case input in
+case "$input" in
 oui | yes | o | y)
 	;;
 *)
@@ -107,8 +121,8 @@ then
 		echo -e "\e[31mErreur!\e[0m"
 		exit
 	fi
-	echo "Vérification de la présence de install et sudo (outils de construction)..."
-	if ! [ $(command -v install) ] || ! [ $(command -v sudo) ]
+	echo "Vérification de la présence de install, sudo et sed (outils de construction)..."
+	if ! [ $(command -v install) ] || ! [ $(command -v sudo) ] || ! [ $(command -v sed) ]
 	then
 		echo -e "\e[31mErreur!\e[0m"
 		exit
@@ -129,6 +143,24 @@ then
 		fi
 	done
 	echo -e "\nDébut de l'installation...\n"
+fi
+
+# Installation de krnlupd:
+if [ $INSTALL_KRNLUPD == y ]
+then
+	# Création du dossier de configuration:
+	sudo mkdir $VERBOSE -p $SYS_CONF_DIR/minpkg/krnlupd
+	if [ $SYS_CONF_DIR != /etc ]
+	then
+		sed -i "s|/etc|$SYS_CONF_DIR|g" krnlupd
+	fi
+
+	# Installation de krnlupd lui-même:
+	sudo install $VERBOSE -m755 krnlupd "$INSTALL_PATH"
+elif [[ $INSTALL_MINPKG == y ]]
+then
+	#Corrections à minpkg si krnlupd n'est pas installé:
+	sed -i "/#KRNLUPD_HOOK/,/#KRNLUPD_HOOK_END/d" minpkg
 fi
 
 # Création des dossiers par utilisateur:

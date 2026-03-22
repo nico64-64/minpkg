@@ -93,6 +93,13 @@ Supprimer un package est aussi simple qu'entrer `minpkg remove PACKAGE` (ou `min
 
 Une fois l'action confirmée, cette procédure est irréversible!
 
+### Mettre à jour et gérer son kernel
+minpkg vient avec krnlupd, un outil de gestion et de mise à jour du kernel. Cet outil est encore plus minimal que minpkg, puisqu'il assume que vous avez déjà configuré, compilé et installé un kernel manuellement et que vous en avez conservé les sources. krnlupd est utile pour apporter des modifications à ce kernel déjà présent en faisant appel à `make menuconfig`. Il permet d'automatiser la suite après la configuration.
+
+Contrairement à minpkg, krnlupd doit être configuré lors de sa première utilisation. Ceci se fait automatiquement.
+
+Vous pouvez aussi appeler krnlupd via minpkg avec la commande `minpkg kernel`. Toutes les fonctionnalités des krnlupd y sont présentes.
+
 ## En apprendre plus
 Pour en apprendre plus sur le fonctionnement de minpkg, lancez-le avec l'option `--comprendre`.
 

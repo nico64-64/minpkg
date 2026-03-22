@@ -1,0 +1,577 @@
+#! /bin/bash
+
+# KRNLUPD
+# a minimal KeRNeL UPDater
+# Outil de mise à jour du kernel de minpkg
+
+
+
+version="1.0" # version de krnlupd
+
+#arch_name= # nom de l'architecture de l'ordinateur
+#os_name # nom (idéalement court) du système d'exploitation
+#os_ver # version du système d'exploitation
+#krnl_ver # version du kernel
+#config_file # nom du fichier de configuration généré par make
+#sysmap_file # nom du fichier de system map généré par make
+#img_file # nom de l'image du kernel généré par make
+#grub_cfg_file # nom du fichier de configuration de GRUB (dans /boot)
+#boot_part # yes (filesystem) si /boot est une partition séparée, no sinon
+#last_upd # dernière fois que le kernel a été mis à jour (est un output de date "+%d %B %Y %H:%M")
+#krnlupd_ver # version de krnlupd ayant effectuée la dernière mise à jour
+#backup # setté s'il faut conserver l'ancienne image en backup
+#no_confirm # setté si --no-confirm est reçu en argument
+#verbose # setté si --verbose ou -v est reçu en argument
+#debug_pt # setté par l'utilisateur s'il veut déboguer le programme (agit comme préfixe à /boot)
+#no_warn_version_mismatch # setté par minpkg pour bypasser l'avertissement de version de krnlupd différente
+
+#Préparation / Nettoyage:
+unset arch_name os_name os_ver krnl_ver config_file sysmap_file img_file grub_cfg_file boot_part last_upd krnlupd_ver backup no_confirm verbose input
+
+
+# Configure krnlupd à sa première utilisation
+function configure
+{
+	echo -e "\nIl semblerait que c'est la première fois que vous utilisez ce"
+	echo "  programme sur ce système."
+	echo -e "Suivez le guide pour configurer les mises à jour de votre kernel!\n"
+
+	echo "1. Sur quelle architecture d'ordinateur sommes-nous?"
+	arch_name="$(uname -m)"
+	echo -e "   \e[36mDétecté:\e[0m $arch_name\n"
+
+	while [[ 1 ]]
+	do
+		echo "2. Quel OS (ou distribution) utilisez-vous?"
+		echo "   Entrez un nom sans espace et de préférence assez court."
+		echo -n "   "
+		read input
+		if [[ -z $input ]] || [[ "$input" == *" "* ]]
+		then
+			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+		else
+			os_name="$input"
+			break
+		fi
+	done
+	echo ""
+
+	while [[ 1 ]]
+	do
+		echo "3. Quelle version de cet OS utilisez-vous?"
+		echo "   Entrez un numéro de version sans espace et de préférence assez court."
+		echo -n "   "
+		read input
+		if [[ -z $input ]] || [[ "$input" == *" "* ]]
+		then
+			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+		else
+			os_ver="$input"
+			break
+		fi
+	done
+	echo ""
+
+	echo "4. Avez-vous une partition /boot séparée?"
+	if [[ $(cat /etc/fstab) == */boot* ]]
+	then
+		if command -v findmnt >> /dev/null
+		then
+			boot_part="yes ($(findmnt -n -o FSTYPE /boot))"
+		else
+			boot_part="yes"
+		fi
+	else
+		boot_part="no"
+	fi
+	echo -e "   \e[36mDétecté:\e[0m $boot_part\n"
+
+	echo "5. Où est votre fichier de configuration de GRUB?"
+	if [[ -f "$debug_pt/boot/grub/grub.cfg" ]]
+	then
+		grub_cfg_file="grub/grub.cfg"
+		echo -e "   \e[36mDétecté:\e[0m /boot/$grub_cfg_file\n"
+	elif [[ -f "$debug_pt/boot/grub.cfg" ]]
+	then
+		grub_cfg_file="grub.cfg"
+		echo -e "   \e[36mDétecté:\e[0m /boot/$grub_cfg_file\n"
+	else
+		echo "   krnlupd n'a pas trouvé de fichier de configuration GRUB."
+		echo "   Entrez le nom du fichier précédé de son chemin depuis $debug_pt/boot."
+		echo "   N'entrez rien si vous n'utilisez pas GRUB."
+		echo -n "   "
+		read input
+		if ! [[ -z $input ]]
+		then
+			grub_cfg_file="$input"
+			break
+		fi
+	fi
+
+	while [[ 1 ]]
+	do
+		echo "6. Voulez-vous lier un script de mise à jour de votre fichier de configuration de GRUB?"
+		echo "   Si oui, entrez le chemin d'accès complet (sans espace) à ce script maintenant."
+		echo "   Sinon, laissez ce champ vide."
+		echo -n "   "
+		read input
+		if [[ -z $input ]]
+		then
+			if [[ -f /etc/minpkg/krnlupd/grub_upd_script ]]
+			then
+				rm /etc/minpkg/krnlupd/grub_upd_script
+			fi
+			break
+		elif [[ "$input" == *" "* ]] || ! [[ -f "$input" ]]
+		then
+			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+		else
+			ln -s "$input" /etc/minpkg/krnlupd/grub_upd_script
+			break
+		fi
+	done
+	echo ""
+
+	while [[ 1 ]]
+	do
+		echo "7. Ce programme assume que vous avez déjà compilé un kernel manuellement"
+		echo "   et que vous en avez conservé les sources."
+		echo "   Entrez maintenant le chemin d'accès complet au dossier où vous les"
+		echo "   avez conservées."
+		echo -n "   "
+		read input
+		if [[ -z $input ]] || ! [[ -d "$input" ]]
+		then
+			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+		else
+			ln -s "$input" /etc/minpkg/krnlupd/krnl_src
+			break
+		fi
+	done
+	echo ""
+
+	while [[ 1 ]]
+	do
+		echo "8. De quelle version du linux kernel s'agit-il?"
+		echo "   Entrez un numéro de version (normalement sous la forme X.XX, où"
+		echo "   X est un nombre) sans espace et idéalement assez court."
+		echo -n "   "
+		read input
+		if [[ -z $input ]] || [[ "$input" == *" "* ]]
+		then
+			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+		else
+			krnl_ver="$input"
+			break
+		fi
+	done
+	echo ""
+
+	while [[ 1 ]]
+	do
+		echo -e "9. Voulez-vous que ce programme conserve automatiquement une ancienne version"
+		echo "   de votre image de boot en tant que backup? (Répondez par oui ou non, y/n.)"
+		echo -n "   "
+		read input
+		if [[ $input == yes || $input == oui || $input == y || $input == o ]]
+		then
+			backup=1
+			break
+		elif [[ $input == non || $input == no || $input == n ]]
+		then
+			break
+		else
+			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+		fi
+	done
+
+
+	if [[ -v verbose ]]
+	then
+		echo "Écriture de la configuration dans les bons fichiers..."
+	fi
+
+	if [[ -v backup ]]
+	then
+		echo "1" > /etc/minpkg/krnlupd/backup
+	fi
+	echo "$krnl_ver" > /etc/minpkg/krnlupd/krnl_ver
+	echo "$grub_cfg_file" > /etc/minpkg/krnlupd/grub_cfg_file
+	echo "$boot_part" > /etc/minpkg/krnlupd/boot_part
+	echo "$os_ver" > /etc/minpkg/krnlupd/os_ver
+	echo "$os_name" > /etc/minpkg/krnlupd/os_name
+	echo "$arch_name" > /etc/minpkg/krnlupd/arch_name
+	echo "$version" > /etc/minpkg/krnlupd/krnlupd_ver
+	echo ".config" > /etc/minpkg/krnlupd/config_file
+	echo "System.map" > /etc/minpkg/krnlupd/sysmap_file
+	echo "arch/$arch_name/boot/bzImage" > /etc/minpkg/krnlupd/img_file
+	touch /etc/minpkg/krnlupd/last_update
+
+	echo -e "\e[32mConfiguration terminée!\e[0m"
+	echo "Vous pouvez maintenant utiliser ce programme pour mettre à jour votre kernel!"
+	echo "Vous n'avez qu'à relancer la même commande pour le faire dès maintenant."
+	echo -e "\nAfin de rester assez court, cet outil de configuration a assumé quelques"
+	echo "  petits détails de build par rapport au kernel. Si vous compilez votre kernel"
+	echo "  avec les réglages par défaut, vous n'avez plus rien d'autre à faire. Sinon,"
+	echo "  continuez à lire..."
+	echo -e "\nLe fichier contenant la configuration créé par make menuconfig est assumé"
+	echo "  être nommé .config et accessible directement depuis les sources du kernel."
+	echo "Le fichier contenant le system map est assumé être nommé System.map et être"
+	echo "  accessible directement depuis les sources du kernel."
+	echo "Le fichier d'image de boot du kernel est assumé être nommé bzImage et être placé"
+	echo "  dans le sous-dossier arch/$arch_name/boot/."
+	echo "Si une de ces assomptions est incorrecte, assurez-vous de la modifier en éditant"
+	echo "  les fichiers config_file, sysmap_file et img_file (respectivement) qui viennent"
+	echo "  d'être créés dans le dossier /etc/minpkg/krnlupd/."
+	echo "Également, si une valeur n'a pas pu être détectée correctement par ce script ou"
+	echo "  si ce script à détecté une fausse valeur, il est important d'aller la modifier"
+	echo "  manuellement en éditant le bon fichier dans le dossier précédement mentionné."
+}
+
+
+# Lit les données de configuration précédement sauvegardées
+function read_config
+{
+	if [[ -v verbose ]]
+	then
+		echo "Lecture des fichiers de configuration..."
+		echo "Lancez $0 --config ou $0 --infos pour afficher ces informations."
+	fi
+
+	if [[ -f /etc/minpkg/krnlupd/backup ]]
+	then
+		backup=1
+	fi
+
+	krnl_ver="$(cat /etc/minpkg/krnlupd/krnl_ver)"
+	grub_cfg_file="$(cat /etc/minpkg/krnlupd/grub_cfg_file)"
+	boot_part="$(cat /etc/minpkg/krnlupd/boot_part)"
+	os_name="$(cat /etc/minpkg/krnlupd/os_name)"
+	os_ver="$(cat /etc/minpkg/krnlupd/os_ver)"
+	arch_name="$(cat /etc/minpkg/krnlupd/arch_name)"
+	krnlupd_ver="$(cat /etc/minpkg/krnlupd/krnlupd_ver)"
+	config_file="$(cat /etc/minpkg/krnlupd/config_file)"
+	sysmap_file="$(cat /etc/minpkg/krnlupd/sysmap_file)"
+	img_file="$(cat /etc/minpkg/krnlupd/img_file)"
+	last_upd="$(cat /etc/minpkg/krnlupd/last_update)"
+}
+
+
+#Gestion des combinaisons d'options:
+if [[ -v 1 ]]
+then
+	if [[ $1 == "--verbose" || $1 == "-v" || $1 == "--no-confirm" ]]
+	then
+		if [[ $1 == "--no-confirm" ]]
+		then
+			no_confirm=--no-confirm
+		else
+			verbose=--verbose
+		fi
+
+		if [[ -v 2 ]]
+		then
+			option="$2"
+		fi
+	else
+		option="$1"
+		if [[ -v 2 ]]
+		then
+			if [[ $2 == "--verbose" || $2 == "-v" ]]
+			then
+				verbose=--verbose
+			elif [[ $2 == "--no-confirm" ]]
+			then
+				no_confirm=--no-confirm
+			fi
+		fi
+	fi
+else
+	option=""
+fi
+
+
+#Prise en charge des options de base:
+case $option in
+--help | --aide | -h | -a | -\?)
+	echo "KRNLUPD"
+	echo "Outil de mise à jour du kernel de minpkg"
+	echo -e "a minimal KeRNeL UPDater\n"
+	echo -e "Usage: krnlupd [--options]\n"
+	echo "Options acceptées:"
+	echo "--config (-c)    affiche les informations de configuration sauvegardées"
+	echo "                 par krnlupd"
+	echo "--help (-h | -?) affiche ce message"
+	echo "--infos (-i)     affiche les informations sauvegardées par krnlupd"
+	echo "                 à propos du kernel et de sa dernière compilation"
+	echo "--new-kernel     modifie la version du kernel enregistrée par krnlupd"
+	echo "--no-confirm     ne demande pas de confirmation (non recommandé)"
+	echo "--revert (-r)    annule la dernière mise à jour du kernel"
+	echo "--reset          démarre krnlupd comme si c'était la première fois"
+	echo "--verbose (-v)   affiche plus de détails dans la console"
+	echo "--version (-V)   affiche la version du programme"
+	echo -e "\nÀ l'exception de --verbose et --no-confirm, les options ne peuvent"
+	echo "  pas être combinées."
+	echo "Toute option non reconnue sera ignorée."
+	echo -e "\nVariable environnementale reconnue:"
+	echo "\$debug_pt        préfixe ajouter à /boot (pour déboguer seulement)"
+	echo -e "\nCe script présume qu'un kernel fonctionnel a déjà été installé"
+	echo "  dans /boot et que ses sources sont toujours présentes ailleurs sur"
+	echo "  ce système. Le but de ce script est uniquement d'automatiser"
+	echo "  l'application de modifications mineures au kernel déjà en usage."
+	echo "S'il est utilisé pour la première fois, krnlupd vous guidera dans sa"
+	echo -e "  configuration.\n"
+	echo "Vous pouvez démarrer ce script en tant que root ou pas. S'il n'est"
+	echo "  pas démarré en tant que root, krnlupd utilisera sudo pour obtenir"
+	echo "  les privilèges nécessaires lorsqu'il en a besoin."
+	echo "Vous pouvez aussi démarrer ce script depuis minpkg avec la commande"
+	echo -e "  minpkg update-kernel.\n"
+	exit
+	;;
+
+--version | -V)
+	echo "krnlupd $version (élément de $(minpkg --version))"
+	exit
+	;;
+esac
+
+
+#Lecture, écriture et/ou affichage de la configuration:
+if [[ -f /etc/minpkg/krnlupd/krnlupd_ver && $option != "--reset" ]]
+then
+	read_config
+else
+	configure
+	exit
+fi
+if [[ $option == "--config" || $option == "-c" ]]
+then
+	echo -e "Configuration actuelle de krnlupd:"
+	echo "=================================="
+	echo "OS:                  $os_name"
+	echo "OS version:          $os_ver"
+	echo "Architecture:        $arch_name"
+	echo "Boot directory:      $debug_pt/boot"
+	echo "GRUB cfg file:       $debug_pt/boot/$grub_cfg_file"
+	if [[ -e /etc/minpkg/krnlupd/grub_upd_script ]]
+	then
+		echo "GRUB update script:  yes ($(readlink /etc/minpkg/krnlupd/grub_upd_script))"
+	else
+		echo "GRUB update script:  no"
+	fi
+	echo "Kernel source:       $(readlink /etc/minpkg/krnlupd/krnl_src)"
+	if [[ -v verbose ]]
+	then
+		echo "Kernel config file:  $config_file"
+		echo "Kernel system map:   $sysmap_file"
+		echo "Kernel image file:   $img_file"
+		echo "Final installation:  $debug_pt/boot"
+	fi
+	if [[ -v backup ]]
+	then
+		echo "Keep a backup image: yes"
+	else
+		echo "Keep a backup image: no"
+	fi
+	echo -e "Sep. boot partition: $boot_part\n"
+	exit
+fi
+
+
+#Affichage des informations du kernel actuel:
+if [[ $option == "--infos" || $option == "--info" || $option == "-i" ]]
+then
+	echo "Informations sur le kernel actuel:"
+	echo "=================================="
+	echo "Kernel:          Linux $krnl_ver"
+	echo "Kernel image:    vmlinuz-$krnl_ver-$os_name-$os_ver"
+	if [[ -v backup ]]
+	then
+		echo "Backup image:    vmlinux-$krnl_ver-$os_name-$os_ver.backup"
+	fi
+	echo "Kernel source:   $(readlink /etc/minpkg/krnlupd/krnl_src)"
+	echo "krnlupd version: $krnlupd_ver"
+	echo -e "Last update:     $last_upd\n"
+	exit
+fi
+
+
+# Nouvelle version du kernel:
+if [[ $option == "--new-kernel" ]]
+then
+	echo "Il semblerait que vous ayiez installé un nouveau kernel..."
+	echo "Vous utilisiez précédement la version $krnl_ver du linux kernel."
+	echo -e "\nQuelle version venez-vous d'installer?"
+	read input
+	if [[ ! -v input ]] || [[ "$input" == *" "* ]] || [[ "$input" == "$krnl_ver" ]]
+	then
+		echo -e "\e[31mErreur!\e[0m Entrée invalide."
+		echo "Vous devez entrer un numéro de version valide (normalement"
+		echo "  sous forme X.XX, où X est un nombre)."
+		echo "Cette entrée ne peut pas contenir d'espace ni être la même"
+		echo "  que l'ancienne version du kernel."
+		exit
+	fi
+	echo "$input" > /etc/minpkg/krnlupd/kernel_version
+	if [[ -v verbose ]]
+	then
+		echo "Version du kernel modifiée avec succès."
+		echo "Vous utilisez maintenant la version $input du linux kernel."
+	fi
+	exit
+fi
+
+
+# Version mismatch:
+if [[ "$version" != "$krnlupd_ver" ]] && ! [[ -v no_confirm ]] && ! [[ -v no_warn_version_mismatch ]]
+then
+	echo -e "\e[93mAttention!\e[0m Il semblerait que vous ayiez mis à jour ce programme depuis"
+	echo "  sa dernière utilisation."
+	echo "Assurez-vous que cette nouvelle version est compatible avec l'ancienne."
+	echo "Si vous ne le savez pas, vous pouvez probablement continuer sans problème."
+	echo -e "\nVoulez-vous continuer quand même? (y/n)"
+	read input
+	if [[ $input != "yes" && $input != "oui" && $input != "y" && $input != "o" ]]
+	then
+		echo -e "\e[31mMise à jour annulée.\e[0m"
+		echo "Vous devriez exécuter $0 --reset pour réinitialiser krnlupd."
+		exit
+	fi
+fi
+
+
+#Sommes-nous root?
+if [[ $(id -u) -ne 0 ]]
+then
+	sudo "$0" $option $verbose $no_confirm
+	exit
+fi
+
+
+#Retour à un ancien backup:
+if [[ $option == "--revert" || $option == "-r" ]]
+then
+	if [[ -v backup ]]
+	then
+		if ! [[ -v no_confirm ]]
+		then
+			echo -e "\nVoulez-vous vraiment remplacer votre dernier kernel par votre backup? (y/n)"
+			read input
+			if [[ -v input ]] && ! [[ $input == yes || $input == oui || $input == y || $input == o ]]
+			then
+				echo -e "\e[31mRemplacement de l'image du kernel annulé.\e[0m"
+				exit
+			fi
+		fi
+		if [[ -v verbose ]]
+		then
+			echo "Retour à un ancien backup..."
+		fi
+		cp "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver.backup" "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver"
+		echo -e "\e[93mAttention!\e[0m Maintenant que tu as remplacé ton dernier"
+		echo "  kernel par ton backup, tu n'as plus d'autre backup!"
+		echo "Si tu es sûr que ce kernel est stable, ce n'est pas un problème,"
+		echo "  mais si ce n'est pas le cas, tu devrais peut-être en créer un"
+		echo "  manuellement avec make defconfig.\n"
+		exit
+	else
+		echo -e "\e[31mErreur!\e[0m Il semblerait que vous n'ayiez pas de backup sur"
+		echo "  lequel vous replier."
+		echo "Par contre, si vous voyez ce message, cela signifie que vous avez tout"
+		echo "  de même réussi à démarrer ce système, ce qui signifie que vous avez"
+		echo "  probablement un backup d'image de kernel non enregistrée par krnlupd."
+		echo "Si ce n'est pas le cas (ou même si c'est le cas...), essayez de mettre"
+		echo "  à jour le kernel en désactivant les dernières fonctionnalités que vous"
+		echo "  avez ajoutées ou bien reconstruisez votre kernel de zéro avec"
+		echo -e "  make defconfig.\n"
+		exit
+	fi
+fi
+
+
+#Configuration du nouveau kernel:
+if [[ ! -L /etc/minpkg/krnlupd/krnl_src ]] || [[ ! -d "$(readlink /etc/minpkg/krnlupd/krnl_src)" ]]
+then
+	echo -e "\n\e[31mErreur!\e[0m Il semblerait que vous ayiez déplacé les sources du kernel..."
+	echo "Vous devriez exécuter $0 --reset pour mettre à jour l'emplacement des sources."
+	exit
+fi
+cd /etc/minpkg/krnlupd/krnl_src
+if [[ -v verbose ]]
+then
+	echo "cd $(readlink /etc/minpkg/krnlupd/krnl_src)"
+	echo "Configuration du nouveau kernel... (make menuconfig)"
+fi
+if ! make menuconfig
+then
+	echo -e "\n\e[31mErreur!\e[0m Impossible de configurer un nouveau kernel."
+	echo "Il semblerait que les sources du kernel ne soient pas en $(readlink /etc/minpkg/krnlupd/krnl_src)."
+	echo "Vous pouvez modifier le répertoire utilisé par krnlupd en exécutant"
+	echo "  $0 --reset."
+	exit
+fi
+
+
+#Confirmation:
+if ! [[ -v no_confirm ]]
+then
+	echo -e "\nConfirmez-vous l'installation de ce nouveau kernel? (y/n)"
+	read input
+	if [[ -v input ]] && ! [[ $input == yes || $input == oui || $input == y || $input == o ]]
+	then
+		echo -e "\e[31mMise à jour annulée.\e[0m"
+		exit
+	fi
+fi
+
+
+#Compilation et installation du nouveau kernel:
+if [[ -v verbose ]]
+then
+	echo -e "\nCompilation du nouveau kernel... (make)\n"
+fi
+make
+if [[ -v verbose ]]
+then
+	echo -e "\nInstallation des modules du nouveau kernel... (make modules_install)\n"
+fi
+make modules_install
+if [[ -v verbose ]]
+then
+	echo -e "\nInstallation du nouveau kernel... (par krnlupd lui-même)"
+fi
+if [[ -v backup ]]
+then
+	if [[ -v backup ]]
+	then
+		echo "Copie de l'ancienne image du kernel pour qu'elle serve de backup..."
+	fi
+	cp "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver.backup"
+fi
+cp "$config_file" "$debug_pt/boot/config-$krnl_ver"
+cp "$sysmap_file" "$debug_pt/boot/System.map-$krnl_ver"
+cp "$img_file" "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver"
+if [[ -e /etc/minpkg/krnlupd/grub_upd_script ]]
+then
+	if [[ -v verbose ]]
+	then
+		echo "Mise à jour du fichier de configuration de GRUB..."
+	fi
+	pushd "$debug_pt/boot" >> /dev/null
+	/etc/minpkg/krnlupd/grub_upd_script
+	popd >> /dev/null
+fi
+echo '$(date "+%d %B %Y %H:%M")' > /etc/minpkg/krnlupd/last_update
+echo "$version" > /etc/minpkg/krnlupd_ver
+
+
+#Confirmation:
+echo -e "\nVotre nouveau kernel a été installé avec succès."
+echo "Redémarrez votre ordinateur pour appliquer les changements."
+if [[ -v backup ]]
+then
+	echo "Si vous ne parvenez pas à démarrer avec le nouveau kernel, modifiez la"
+	echo "  commande de boot pour utiliser l'ancien en ajoutant .backup à"
+	echo "  vmlinuz-$krnl_ver-$os_name-$os_ver."
+fi
+echo ""

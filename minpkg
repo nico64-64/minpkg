@@ -10,7 +10,7 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.1 #version du programme
+version=1.6.2 #version du programme
 
 #Options
 build_system="make" #indique le build system à utiliser
@@ -35,15 +35,21 @@ sudo="" #commande à utiliser pour obtenir les droits de superuser (vide si on e
 #keep_old (indique au programme qu'il doit garder les anciennes version lors de la mise à jour d'un package)
 #no_strip (indique au programme s'il doit installer les symboles de débogage)
 #remove_static_libtool (indique au programme s'il doit supprimer les archives libtool et les bibliothèques statiques lors de l'installation du package)
+#new_kernel (option passée à krnlupd)
+#revert_kernel_update (option passée à krnlupd)
+#reset_krnlupd (option passée à krnlupd)
+#show_krnlupd_config (opiton passée à krnlupd)
 #---
 #installation (indique au programme que la commande install a été entrée)
 #desinstallation (indique au programme que la commande remove a été entrée)
 #reparation (indique au programme que la commande restore a été entrée)
 #infos (indique au programme que la commande infos a été entrée)
 #describe (indique au programme que la commande describe a été entrée)
+#update_kernel (indique au programme que la commande kernel a été entrée) (appel à krnlupd)
+#show_kernel_infos (indique au programme que la commande kernel-infos a été entrée) (appel à krnlupd)
 
 #Nettoyage préliminaire
-unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtool no_cleaning insecure dryrun no_confirm fix_aclocal repair_latest installation desinstallation reparation infos describe pkg_descr archiveur_magique strip_cmd archive_name install_cmd destdir_prefix
+unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtool no_cleaning insecure dryrun no_confirm fix_aclocal repair_latest installation desinstallation reparation infos describe pkg_descr archiveur_magique strip_cmd archive_name install_cmd destdir_prefix reset_krnlupd revert_kernel_update new_kernel update_kernel show_kernel_infos show_krnlupd_config
 
 
 
@@ -1452,7 +1458,7 @@ do
 	#Nouvelle commande ou nouvel argument:
 		if [[ $arg == ll ]]
 		then
-			verbose=1
+			verbose=--verbose
 			arg=ls
 		fi
 		case $arg in
@@ -1469,6 +1475,10 @@ do
 			echo -e "list (ls / ll)\taffiche la liste des packages installés par minpkg"
 			echo -e "remove (-)\tdésinstalle des packages"
 			echo -e "repair\t\trépare des packages brisés"
+			#KRNLUPD_HOOK
+			echo -e "kernel\t\tmet à jour le kernel de ce système"
+			echo -e "kernel-infos\taffiche quelques informations sur le kernel actuel"
+			#KRNLUPD_HOOK_END
 			echo -e "version\t\tindique la version en usage de packages"
 			echo -e "versions\taffiche la liste des versions installées de packages"
 
@@ -1511,6 +1521,17 @@ do
 
 			echo -e "\nOption de réparation:"
 			echo -e "--latest\trépare la version présentement en usage"
+
+			#KRNLUPD_HOOK
+			echo -e "\nOptions de mise à jour du kernel:"
+			echo -e "--new-kernel\tmodifie la version du kernel enregistrée par minpkg"
+			echo -e "--reset\t\tréinitialise le système de mise à jour du kernel"
+			echo -e "--revert (-R)\tannule la dernière mise à jour du kernel (si possible)"
+
+			echo -e "\nOption d'affichage des informations du kernel:"
+			echo -e "--show-config\taffiche plutôt les informations de configuration de l'outil"
+			echo -e "\t\tde mise à jour du kernel"
+			#KRNLUPD_HOOK_END
 
 			echo -e "\nOptions de débogage (non recommandées):"
 			echo -e "--dryrun\tn'effectue aucune modification ayant un impact sur le système"
@@ -1714,7 +1735,7 @@ do
 		--insecure | --insécure)
 			#Pour les personnes insécures dans la vie...
 			insecure=1
-			verbose=1
+			verbose=--verbose
 			if [[ -v no_confirm ]]
 			then
 				echo "--no_confirm est incompatible avec --insecure!"
@@ -1744,6 +1765,12 @@ do
 			repair_latest=1
 			;;
 
+		#KRNLUPD_HOOK
+		--new-kernel)
+			new_kernel=--new-kernel
+			;;
+		#KRNLUPD_HOOK_END
+
 		--no-build-dir | --sans-dossier-build | --sans-dossier-de-build | -n)
 			no_build_dir=1
 			;;
@@ -1753,7 +1780,7 @@ do
 			;;
 
 		--no-confirm)
-			no_confirm=1
+			no_confirm=--no-confirm
 			if [[ -v insecure ]]
 			then
 				echo "--no_confirm est incompatible avec --insecure!"
@@ -1775,6 +1802,20 @@ do
 			remove_static_libtool = 1
 			;;
 
+		#KRNLUPD_HOOK
+		--reset)
+			reset_krnlupd=--reset
+			;;
+
+		--revert | -R)
+			revert_kernel_update=--revert
+			;;
+
+		--show-config)
+			show_krnlupd_config=--config
+			;;
+		#KRNLUPD_HOOK_END
+
 		--simulate | --simuler | --no-install | --sans-installer | -s)
 			simulation=1
 			;;
@@ -1788,7 +1829,7 @@ do
 			;;
 
 		--verbose | -v)
-			verbose=1
+			verbose=--verbose
 			;;
 
 		--version | -V)
@@ -1807,6 +1848,16 @@ do
 		install | installer | add | ajouter | upgrade | +)
 			installation=1
 			;;
+
+		#KRNLUPD_HOOK
+		kernel | update-kernel | krnlupd | kernel-update)
+			update_kernel=1
+			;;
+
+		kernel-infos | kernel-info | infos-kernel | info-kernel)
+			show_kernel_infos=1
+			;;
+		#KRNLUPD_HOOK_END
 
 		list | liste | ls) #ll est préalablement transformé en -v ls
 			if [[ -v verbose ]]
@@ -1954,6 +2005,18 @@ then
 	do
 		restore $pkg
 	done
+
+#KRNLUPD_HOOK
+elif [[ -v update_kernel ]]
+#Mise à jour du kernel:
+then
+	krnlupd $verbose $new_kernel $reset_krnlupd $revert_kernel_update $no_confirm
+
+elif [[ -v show_kernel_infos ]]
+#Affichage des infos du kernel:
+then
+	krnlupd $verbose $show_krnlupd_config $no_confirm
+#KRNLUPD_HOOK_END
 
 elif [[ $versionnage -eq 0 ]] && [[ ! -v infos ]] && [[ ! -v describe ]]
 # Une option d'installation/désinstallation a été fournie sans aucune commande:
