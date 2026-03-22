@@ -2015,7 +2015,7 @@ then
 elif [[ -v show_kernel_infos ]]
 #Affichage des infos du kernel:
 then
-	krnlupd $verbose $show_krnlupd_config $no_confirm
+	krnlupd $verbose $show_krnlupd_config --infos
 #KRNLUPD_HOOK_END
 
 elif [[ $versionnage -eq 0 ]] && [[ ! -v infos ]] && [[ ! -v describe ]]
