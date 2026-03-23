@@ -554,7 +554,7 @@ then
 	then
 		echo "Copie de l'ancienne image du kernel pour qu'elle serve de backup..."
 	fi
-	cp "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver.backup"
+	cp "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver" "$debug_pt/boot/vmlinuz-$krnl_ver-$os_name-$os_ver.backup"
 fi
 cp "$config_file" "$debug_pt/boot/config-$krnl_ver"
 cp "$sysmap_file" "$debug_pt/boot/System.map-$krnl_ver"
@@ -569,8 +569,8 @@ then
 	/etc/minpkg/krnlupd/grub_upd_script
 	popd >> /dev/null
 fi
-echo '$(date "+%d %B %Y %H:%M")' > /etc/minpkg/krnlupd/last_update
-echo "$version" > /etc/minpkg/krnlupd_ver
+echo $(date "+%d %B %Y %H:%M") > /etc/minpkg/krnlupd/last_update
+echo "$version" > /etc/minpkg/krnlupd/krnlupd_ver
 
 
 #Confirmation:
