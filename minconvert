@@ -1,0 +1,174 @@
+#! /bin/bash
+
+# MINCONVERT
+#
+# Outil de conversion des PKGBUILD vers minpkg
+
+
+version=0.1 # version de minconvert
+
+unset verbose fichier get_from_web
+
+
+# Temporaire:
+get_from_web="wget2" # ou wget, curl -LO, lynx, etc.
+
+
+function convert_PKGBUILD
+{
+	# Lecture du fichier:
+	. "$1"
+	
+	# Vérification du fichier:
+	if ! [[ -v pkgname && -v pkgver && -v source ]] || ! declare -F package > /dev/null
+	then
+		echo -e "\e[31mErreur!\e[0m $1 n'est pas un PKGBUILD correct."
+		exit
+	fi
+	
+	# Fonctionnalités non-supportées:
+	if [[ -v install ]]
+	then
+		echo -e "\e[93mAttention!\e[0m Ce package semble utiliser un script d'installation, ce qui n'est pas supporté par minconvert."
+		echo "Il se peut que l'installtion ne fonctionne pas correctement."
+		echo "Voulez-vous continer? (y/n)"
+		read input
+		if ! [[ $input == yes || $input == oui || $input == y || $input == o ]]
+		then
+			exit
+		fi
+	fi
+	
+	# Aquisition des sources:
+	for src_el in $source
+	do
+		case $src_el in
+		*"::https://"*) # https avec nom spécifié en prémisse
+			$get_from_web "$(echo $src_el | sed 's/.*:://')" -O "$(echo $src_el | sed 's/::.*//')" # download l'url après le :: (TODO: le -O ne vaut que wget...)
+			src_el="$(echo $src_el | sed 's/::.*//')" # extrait le nom de l'archive indiqué avant le ::
+			;;
+		
+		"https://"*) # https standard
+			$get_from_web $src_el
+			$src_el="$(echo $src_el | sed 's|.*/||')" # extrait le nom de l'archive de l'url
+			;;
+		
+		"git+https://"*#*) # git (via https) avec branche ou tag spécifique
+			git clone --branch $(echo "$src_el" | sed 's/.*#\(branch\|tag\)=\(.*\)/\2/') $(echo "$src_el" | sed 's/#.*//') # transformé en git clone --branch TAG/BRANCH URL
+			unset src_el
+			;;
+		
+		"git+https://"*) # git (via https) standard
+			git clone $src_el
+			unset src_el
+			;;
+		
+		*) # fichier local
+			if [[ ! -f "$src_el" ]]
+			then
+				echo -e "\e[31mErreur!\e[0m Impossible d'accéder aux sources du package."
+				echo "$src_el ne correspond pas à aucune méthode supportée (https, git (via https) et fichier local)."
+				exit
+			fi
+		esac
+		if [[ -v noextract ]] && ! [[ -z $noextract ]]
+		then
+			for i in "${noextract[@]}"; do
+				if [[ "$i" == "$src_el" ]]
+				then
+					unset src_el
+					break
+				fi
+			done
+		fi
+		if [[ -v src_el ]]
+		then
+			case "$src_el" in
+			*.tar* | *.tgz)
+				tar xf $verbose "$src_el"
+				rm "$src_el"
+				;;
+			*.zip)
+				unzip xf "$src_el"
+				rm "$src_el"
+				;;
+			*)
+				echo -e "\e[31mErreur!\e[0m Impossible de deviner le type d'archive du fichier $src_el."
+				exit
+			esac
+		fi
+	done
+	
+	#Exécution de la préparation du package:
+	prepare
+	
+	#SUITE!
+}
+
+
+# Gestion des arguments:
+for arg in "$@"
+do
+	case $arg in
+	--help | --aide | -h | -a | -\?)
+		echo "À venir!"
+		exit
+		;;
+	
+	--version | -V)
+		echo "minconvert $version (élément de $(minpkg --version))"
+		exit
+		;;
+	
+	--verbose | -v)
+		verbose=--verbose
+		;;
+	
+	-*)
+		echo -e "\e[31mErreur!\e[0m Cette option ($arg) n'est pas supportée."
+		echo "Entrez $0 --help pour afficher la liste des options supportées."
+		exit
+		;;
+	
+	*)
+		if [[ -v fichier ]]
+		then
+			echo -e "\e[93mAttention!\e[0m Vous avez déjà spécifié un fichier à convertir ($fichier)."
+			echo "Le fichier suivant ($arg) sera donc ignoré, puisque minconvert"
+			echo -e "  ne peut traiter qu'un seul fichier à la fois.\n"
+		else
+			fichier="$arg"
+		fi
+		;;
+	esac
+done
+
+
+# Vérification du fichier reçu en argument:
+if [[ ! -v fichier ]]
+then
+	echo -e "\e[31mErreur!\e[0m Vous devez fournir un fichier à convertir en argument à minconvert."
+	exit
+elif [[ ! -f "$fichier" ]]
+then
+	echo -e "\e[31mErreur!\e[0m Ce fichier ($fichier) n'existe pas ou n'est pas accessible."
+	exit
+fi
+
+
+# Identification du type de fichier:
+case "$(basename $fichier)" in
+PKGBUILD)
+	if [[ -v verbose ]]
+	then
+		echo "Conversion de $fichier (format PKGBUILD / AUR) en format compatible minpkg..."
+	fi
+	convert_PKGBUILD $fichier
+	;;
+
+*)
+	echo -e "\e[31mErreur!\e[0m $fichier n'est pas un fichier de format supporté."
+	echo "Vous pouvez consulter la liste des formats supportés en entrant $0 -?."
+	exit
+	;;
+esac
