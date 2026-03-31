@@ -395,7 +395,7 @@ then
 	echo "Kernel image:    vmlinuz-$krnl_ver-$os_name-$os_ver"
 	if [[ -v backup ]]
 	then
-		echo "Backup image:    vmlinux-$krnl_ver-$os_name-$os_ver.backup"
+		echo "Backup image:    vmlinuz-$krnl_ver-$os_name-$os_ver.backup"
 	fi
 	echo "Kernel source:   $(readlink /etc/minpkg/krnlupd/krnl_src)"
 	echo "krnlupd version: $krnlupd_ver"

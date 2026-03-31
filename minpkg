@@ -10,7 +10,7 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.2 #version du programme
+version=1.6.3 #version du programme
 
 #Options
 build_system="make" #indique le build system à utiliser
@@ -177,8 +177,8 @@ function remove_links
 		file="$1/$(basename $file)"
 		if [[ -L "/$file" ]] #symlink
 		then
-			if [[ "$(readlink /$file)" == "/usr/pkgs/$pkg_name/$pkg_version/$file" ]] || [[ -L "$/usr/pkgs/$pkg_name/$pkg_version/$file" && "$(readlink $(readlink /$file))" == "/usr/pkgs/$pkg_name/$pkg_version/"* ]]
-			#si c'est un symlink vers un fichier dans le package ou si dans le package, ce symlink en est aussi un
+			if [[ "$(readlink /$file)" == "/usr/pkgs/$pkg_name/$pkg_version/$file" ]] || [[ -L "/usr/pkgs/$pkg_name/$pkg_version/$file" && "$(readlink -f /usr/pkgs/$pkg_name/$pkg_version/$file)" == "/usr/pkgs/$pkg_name/$pkg_version/"* ]]
+			#si c'est un symlink vers un fichier dans le package ou si dans le package, ce symlink en est aussi un et qu'il pointe vers quelque chose qui fait aussi partie de ce package
 			#Cette gestion des "vrais" symlinks laisse un peu à désirer. Si quelque chose brise, il y a des chances que ce soit ici et à cause de ça...
 			then
 				echo "Suppression de /$file (symlink vers $(readlink /$file))." >> $HOME/.cache/minpkg/uninstall.log
@@ -447,7 +447,7 @@ function installer
 	#Configuration du package:
 	if [[ $config_system == configure_full ]]
 	then
-		CONFIGURE_ARGS="--disable-static --enable-shared --docdir=/usr/share/doc/$pkg_name-$pkg_version --mandir=/usr/share/man --sysconfdir=/etc $CONFIGURE_ARGS"
+		CONFIGURE_ARGS="--disable-static --enable-shared --docdir=/usr/share/doc/$pkg_name-$pkg_version --mandir=/usr/share/man --sysconfdir=/etc $CONFIGURE_ARGS --localstatedir=/var"
 	fi
 	echo ""
 
@@ -485,7 +485,7 @@ function installer
 		fi
 		if [[ $build_system == none ]] || [[ -v no_build_dir ]] #pas de dossier de build
 		then
-			if ! eval cmake . --install-prefix /usr "$CONFIGURE_ARGS"
+			if ! eval cmake . --install-prefix /usr -D CMAKE_BUILD_TYPE=Release "$CONFIGURE_ARGS"
 			then
 				echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment cmake?"
 				echo "Installation annulée."
@@ -513,7 +513,7 @@ function installer
 		then
 			strip_cmd="-D strip=true"
 		fi
-		if ! eval meson setup --prefix=/usr --buildtype=release $strip_cmd "$CONFIGURE_ARGS" #s'applique peu importe s'il y a un dossier de build ou pas
+		if ! eval meson setup --prefix=/usr --buildtype=release -D docdir="/usr/share/doc/$pkg_name-$pkg_version" $strip_cmd "$CONFIGURE_ARGS" #s'applique peu importe s'il y a un dossier de build ou pas
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment meson?"
 			echo "Installation annulée."
@@ -889,8 +889,8 @@ function installer
 		echo "Utilisez pip3 pour le gérer, le mettre à jour ou le désinstaller."
 		echo -e "\nSi un message affirmant que le module a été installé hors du PATH s'est affiché,\nvous devriez réparer votre python (s'il a été installe avec minpkg). Exemple: minpkg repair python3.\n"
 	else
-		echo -e "Installed $(date)\nBy $(id -u -n)\n" > "/usr/pkgs/$pkg_name/$pkg_version/infos.minpkg"
-		echo -e "Config: $config_system\nBuild: $build_system\nTests: $test_system\nInstall: $install_system" >> "/usr/pkgs/$pkg_name/$pkg_version/infos.minpkg"
+		echo -e "Installed $(date)\nBy $(id -u -n)\n" | $sudo tee "/usr/pkgs/$pkg_name/$pkg_version/infos.minpkg" > /dev/null
+		echo -e "Config: $config_system\nBuild: $build_system\nTests: $test_system\nInstall: $install_system" | $sudo tee -a "/usr/pkgs/$pkg_name/$pkg_version/infos.minpkg" > /dev/null
 		$sudo cp $HOME/.cache/minpkg/install.log "/usr/pkgs/$pkg_name/$pkg_version/install.log"
 		if [[ -v pkg_descr ]]
 		then
