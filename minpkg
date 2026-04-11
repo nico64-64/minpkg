@@ -10,7 +10,7 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.3 #version du programme
+version=1.6.4 #version du programme
 
 #Options
 build_system="make" #indique le build system à utiliser
@@ -49,7 +49,7 @@ sudo="" #commande à utiliser pour obtenir les droits de superuser (vide si on e
 #show_kernel_infos (indique au programme que la commande kernel-infos a été entrée) (appel à krnlupd)
 
 #Nettoyage préliminaire
-unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtool no_cleaning insecure dryrun no_confirm fix_aclocal repair_latest installation desinstallation reparation infos describe pkg_descr archiveur_magique strip_cmd archive_name install_cmd destdir_prefix reset_krnlupd revert_kernel_update new_kernel update_kernel show_kernel_infos show_krnlupd_config
+unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtool no_cleaning insecure dryrun no_confirm fix_aclocal repair_latest installation desinstallation reparation infos find describe pkg_descr archiveur_magique strip_cmd archive_name install_cmd destdir_prefix reset_krnlupd revert_kernel_update new_kernel update_kernel show_kernel_infos show_krnlupd_config
 
 
 
@@ -430,11 +430,11 @@ function installer
 	#Correction d'un bug avec autotools (--fix-aclocal) si necessaire:
 	if [[ -v fix_aclocal ]]
 	then
-		#La cause de ce "bug" est normalement un packaage qui a été décomprressé manuellement (et potentiellement modifié) avant d'etre passé a minpkg.
-		#En fait, automake croit que les 4 fichiers suivants ne sont plus a jour et essaie donc de les regénérer avec aclocal et compagnie, qui ne sont pas installés sur ce systeme.
+		#La cause de ce "bug" est normalement un package qui a été décompressé manuellement (et potentiellement modifié) avant d'être passé a minpkg.
+		#En fait, automake croit que les 4 fichiers suivants ne sont plus à jour et essaie donc de les regénérer avec aclocal et compagnie, qui ne sont pas installés sur ce système.
 		#Pour éviter cela, on peut tout simplement toucher les fichiers concernés (dans le bon ordre) pour ne pas qu'automake se mélange.
-		#ATTENTION: Ce hack fonctionne *seulement* dans ce cas précis et ne résoudra pas les vrais problemes necessitant aclocal (ou un autre autotool) pour vrai!
-		#C'est entre autre pour cette raison que cette opération n'est pas effetcuée par défaut. Si vous voulez le faire, vous pouvez toujours vous setter un alias.
+		#ATTENTION: Ce hack fonctionne *seulement* dans ce cas précis et ne résoudra pas les vrais problèmes nécessitant aclocal (ou un autre autotool) pour vrai!
+		#C'est entre autre pour cette raison que cette opération n'est pas effectuée par défaut. Si vous voulez le faire, vous pouvez toujours vous setter un alias.
 		(
 			#Ceci est executé dans une subshell, afin de ne pas jouer avec les shopt de la shell principale (définis par l'utilisateur).
 			shopt -s globstar nullglob
@@ -447,7 +447,7 @@ function installer
 	#Configuration du package:
 	if [[ $config_system == configure_full ]]
 	then
-		CONFIGURE_ARGS="--disable-static --enable-shared --docdir=/usr/share/doc/$pkg_name-$pkg_version --mandir=/usr/share/man --sysconfdir=/etc $CONFIGURE_ARGS --localstatedir=/var"
+		CONFIGURE_ARGS="--disable-static --enable-shared --docdir=/usr/share/doc/$pkg_name-$pkg_version --mandir=/usr/share/man --sysconfdir=/etc --localstatedir=/var $CONFIGURE_ARGS"
 	fi
 	echo ""
 
@@ -493,7 +493,7 @@ function installer
 				return;
 			fi
 		else #depuis un dossier de build
-			if ! eval cmake .. --install-prefix /usr "$CONFIGURE_ARGS"
+			if ! eval cmake .. --install-prefix /usr -D CMAKE_BUILD_TYPE=Release "$CONFIGURE_ARGS"
 			then
 				echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment cmake?"
 				echo "Installation annulée."
@@ -513,7 +513,7 @@ function installer
 		then
 			strip_cmd="-D strip=true"
 		fi
-		if ! eval meson setup --prefix=/usr --buildtype=release -D docdir="/usr/share/doc/$pkg_name-$pkg_version" $strip_cmd "$CONFIGURE_ARGS" #s'applique peu importe s'il y a un dossier de build ou pas
+		if ! eval meson setup --prefix=/usr --buildtype=release $strip_cmd "$CONFIGURE_ARGS" #s'applique peu importe s'il y a un dossier de build ou pas
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment meson?"
 			echo "Installation annulée."
@@ -523,11 +523,12 @@ function installer
 		echo -e "Package configuré avec meson setup --prefix=/usr --buildtype=release $CONFIGURE_ARGS...\n" >> $HOME/.cache/minpkg/install.log
 		;;
 
-	perl) #sera probablement retiré un jour...
+	perl) #pas vraiment supporté et sera retiré un jour
 		if [[ -v verbose ]]
 		then
 			echo -e "Configuration du package avec perl...\n"
 		fi
+		echo -e "\e[93m\eAttention! La configuration avec Perl est dépréciée et pourrait être retirée prochainement.\e[0m"
 		if ! eval perl Makefile.PL "$CONFIGURE_ARGS"
 		then
 			echo -e "\n\e[31mErreur!\e[0m La commande de configuration a échoué!\nEst-ce que ce package utilise vraiment perl pour sa configuration?"
@@ -577,7 +578,7 @@ function installer
 			echo -e "\n\e[31mErreur!\e[0m make html a échoué!"
 			echo -e "A-t-on installées toutes les dépendances?"
 			echo "Installation de la documentation annulée."
-			echo "Erreur fatale lors de la construction de la documentation (make html)." >> $HOME/.cache/minpkg/install.log
+			echo "Erreur lors de la construction de la documentation (make html)." >> $HOME/.cache/minpkg/install.log
 			#erreur non fatale
 		fi
 		;;
@@ -797,6 +798,13 @@ function installer
 	#Suppression des bibliotheques statiques et des archives libtool:
 	if [[ -v remove_static_libtool ]]
 	then
+		#Ceci n'est pas fait par défaut afin de ne pas briser inutilement des vieux packages,
+		#  mais avec des packages modernes, seules quelques rares exceptions (comme gcc et ses dépendances)
+		#  ont encore vraiment besoin des bibliothèques statiques et des archives libtool.
+		#Si quelqu'un cherche une méthode pour réduire encore plus son espace disque utilisé, setter
+		#  un alias pour toujours activer cette option ne devrait pas vraiment causer problème.
+		#Notez aussi que l'option de configuration par défaut (configure_full) tente déjà de désactiver
+		#  la construction des bibliothèques statiques au profit des bibliothèques partagées.
 		(
 			#Ceci est executé dans une subshell, afin de ne pas jouer avec les shopt de la shell principale (définis par l'utilisateur).
 			shopt -s globstar nullglob
@@ -1235,7 +1243,35 @@ then
 fi
 
 
-# Options et Commandes:
+#Est-ce la première utilisation?
+if [[ ! -d $HOME/.cache/minpkg ]]
+then
+	echo "Il semblerait que ce soit la première fois que vous utilisez minpkg."
+	if [[ $(id -u) -eq 0 ]]
+	then
+		echo "Voulez-vous configurer minpkg pour l'usager root? (y/n)"
+	else
+		echo "Voulez-vous configurer minpkg pour cet usager? (y/n)"
+	fi
+	read input
+	case $input in
+	oui | yes | o | y)
+		if [[ -v verbose ]]
+		then
+			mkdir -pv $HOME/.cache/minpkg/{sources,sandbox}
+		else
+			mkdir -p $HOME/.cache/minpkg/{sources,sandbox}
+		fi
+		;;
+	*)
+		echo -e "\e[31mConfiguration annulée.\e[0m"
+		exit
+		;;
+	esac
+fi
+
+
+#Options et Commandes:
 for arg in "$@"
 do
 	if [[ $build_system == "INPUT" ]]
@@ -1408,6 +1444,11 @@ do
 			echo -e "Vous pouvez entrer minpkg list pour obtenir la liste des packages installés par minpkg.\n"
 		fi
 
+	elif [[ -v find ]] && [[ $arg != -* ]]
+	#Nouveau package à trouver
+	then
+		minpkg ll | grep "$arg"
+
 	elif [[ -v infos ]] && [[ $arg != -* ]]
 	#Nouveau package à afficher
 	then
@@ -1470,6 +1511,7 @@ do
 			echo -e "Commandes acceptées:"
 			echo -e "help\t\taffiche ce message"
 			echo -e "describe\tmodifie la description de packages installés"
+			echo -e "find\t\tcherche si les packages spécifiés sont installés"
 			echo -e "infos\t\taffiche quelques informations sur des packages installés"
 			echo -e "install (+)\tinstalle ou met à jour des packages"
 			echo -e "list (ls / ll)\taffiche la liste des packages installés par minpkg"
@@ -1664,16 +1706,16 @@ do
 			echo -e "Usage: minpkg --config CONFIG_SYSTEM\n   ou  minpkg -c CONFIG_SYSTEM\n"
 
 			echo "minpkg peut configurer les packages des façons suivantes:"
-			echo -e "configure_full\téquivalent à ./configure avec beaucoup d'arguments (par défaut)"
-			echo -e "configure\téquivalent à ./configure --prefix=/usr seulement"
-			echo -e "cmake\t\téquivalent à cmake ."
-			echo -e "meson\t\téquivalent à meson setup --prefix=/usr --buildtype=release"
-			echo -e "perl\t\téquivalent à perl Makefile.PL (implique --no-build-dir)"
+			echo -e "configure_full\téquivalent à ./configure avec plusieurs arguments (par défaut)"
+			echo -e "configure\téquivalent à ./configure avec les arguments essentiels seulement"
+			echo -e "cmake\t\téquivalent à cmake (arguments essentiels seulement)"
+			echo -e "meson\t\téquivalent à meson setup (arguments essentiels seulement)"
+			echo -e "perl\t\téquivalent à perl Makefile.PL (implique --no-build-dir) (déprécié)"
 			echo -e "ask / perso\tune commande de configuration sera demandée au moment opportun"
 			echo -e "none / aucun\taucune configuration nécessaire"
 
 			echo -e "\nVous pouvez aussi ajouter des arguments aux commandes en définissant la variable environnementale CONFIGURE_ARGS."
-			echo -e "Exemple: CONFIGURE_ARGS=\"--argument-supplémentaire\" minpkg install package.tar.xz -c meson -b ninja"
+			echo -e "Exemple: CONFIGURE_ARGS=\"-D with-xxxx=yes\" minpkg install package.tar.xz -c meson -b ninja"
 
 			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et n'a aucun effet si aucun package n'est installé."
 			exit
@@ -1705,7 +1747,7 @@ do
 			echo -e "magic / magique\t\tutilise la technique d'installation liée au build (par défaut)"
 			echo -e "make_destdir / make\tinstalle le package avec make DESTDIR=... install"
 			echo -e "make_html\t\tinstalle le package avec make DESTDIR=... install && make DESTDIR=... install-html"
-			echo -e "make_prefix\t\tinstalle le package avec make PREFIX=... install"
+			echo -e "make_prefix\t\tinstalle le package avec make PREFIX=... install (non-recommandé)"
 			echo -e "ninja\t\t\tinstalle le package avec DESTDIR=... ninja install"
 			echo -e "pip3\t\t\tinstalle le package avec pip3 install (ATTENTION: ce package sera geré par pip3 et non minpkg!)"
 			echo -e "ask / perso\t\tune commande d'installation sera demandée au moment opportun"
@@ -1849,6 +1891,10 @@ do
 
 		describe | decrire | décrire | descr | description)
 			describe=1
+			;;
+
+		find | trouver)
+			find=1
 			;;
 
 		infos | info | informations | information)
@@ -2028,7 +2074,7 @@ then
 	krnlupd $verbose $show_krnlupd_config --infos
 #KRNLUPD_HOOK_END
 
-elif [[ $versionnage -eq 0 ]] && [[ ! -v infos ]] && [[ ! -v describe ]]
+elif [[ $versionnage -eq 0 ]] && [[ ! -v infos ]] && [[ ! -v describe ]] && [[ ! -v find ]]
 # Une option d'installation/désinstallation a été fournie sans aucune commande:
 then
 	echo -e "\e[31mErreur:\e[0m Vous devez fournir une commande pour appliquer ces options."

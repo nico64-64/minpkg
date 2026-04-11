@@ -6,20 +6,11 @@
 
 
 INSTALL_PATH=/usr/bin
-CREATE_ROOT_CACHE_DIR=y
 PKGS_PATH=/usr/pkgs
-INSTALL_MINPKG=y
 DEFAULT_PREFIX=/usr
 INSTALL_KRNLUPD=y
 SYS_CONF_DIR=/etc
 
-
-# Sommes-nous root?
-if [ $(id -u) -eq 0 ]
-then
-	echo "N'exécutez pas ce script en tant que root!"
-	exit
-fi
 
 # Prise en charge des arguments (options):
 for arg in "$@"
@@ -29,12 +20,12 @@ do
 		echo "=== install.sh ==="
 		echo "Script d'installation de minpkg."
 		echo ""
-		echo "Vous n'êtes pas obligé d'utiliser ce script, mais il vous facilitera beaucoup la vie."
+		echo "Vous n'êtes pas obligé d'utiliser ce script, mais il vous facilitera certainement la vie."
 		echo ""
 		echo "Voici les options que peut accepter ce script:"
 		echo -e "--help (-h / -?)\tAffiche ce texte"
-		echo -e "--default-prefix=...\tIndique l'endroit où seront créés la plupart des"
-		echo -e "\t\t\tsymlinks (valeur par défaut: /usr)"
+		echo -e "--default-prefix=...\tIndique l'endroit où seront créés la plupart des symlinks"
+		echo -e "\t\t\t(valeur par défaut: /usr)"
 		echo -e "--install-path=...\tIndique l'endroit où installer minpkg"
 		echo -e "\t\t\t(valeur par défaut: /usr/bin)"
 		echo -e "--pkgs-path=...\t\tIndique l'endroit où seront installés les packages"
@@ -43,11 +34,8 @@ do
 		echo -e "\t\t\tconfiguration de minpkg (valeur par défaut: /etc)"
 		echo -e "--verbose (-v)\t\tAffiche plus d'informations sur les actions effectuées"
 		echo -e "\t\t\tpar ce script"
-		echo -e "--without-installing\tCrée les dossiers de cache pour l'utilisateur,"
-		echo -e "\t\t\tmais n'installe pas minpkg (implique --without-krnlupd)"
 		echo -e "--without-krnlupd\tN'installe pas krnlupd, l'outil de mise à jour du kernel"
 		echo -e "\t\t\tde minpkg"
-		echo -e "--without-root-cache\tNe crée pas de dossier de cache pour l'utilisateur root"
 		echo ""
 		exit
 		;;
@@ -72,17 +60,8 @@ do
 		VERBOSE='-v'
 		;;
 
-	--without-installing)
-		INSTALL_MINPKG=n
-		INSTALL_KRNLUPD=n
-		;;
-
 	--without-krnlupd)
 		INSTALL_KRNLUPD=n
-		;;
-
-	--without-root-cache)
-		CREATE_ROOT_CACHE_DIR=n
 		;;
 
 	*)
@@ -91,6 +70,13 @@ do
 		;;
 	esac
 done
+
+# Sommes-nous root?
+if [ $(id -u) -ne 0 ]
+then
+	echo "Svp exécuter ce script en tant que root."
+	exit
+fi
 
 echo -e "\n\e[1m\e[32m=== Installation de minpkg ===\e[0m\n"
 echo -e "\e[1mminpkg\e[0m sera installé sur ce système avec les options reçues en arguments par ce script."
@@ -108,88 +94,95 @@ esac
 echo ""
 
 # Vérifications:
-if [ $INSTALL_MINPKG == y ]
+if ! [ -f minpkg ]
 then
-	if ! [ -f minpkg ]
-	then
-		echo -e "\e[31mErreur!\e[0m Fichier \"minpkg\" introuvable."
-		echo "veuillez lancer ce script depuis le même dossier que ce fichier."
-		exit
-	fi
-	echo "Vérification de la présence de bash (dépendance)..."
-	if ! [ -f /bin/bash ]
-	then
-		echo -e "\e[31mErreur!\e[0m"
-		exit
-	fi
-	echo "Vérification de la présence de install, sudo et sed (outils de construction)..."
-	if ! [ $(command -v install) ] || ! [ $(command -v sudo) ] || ! [ $(command -v sed) ]
-	then
-		echo -e "\e[31mErreur!\e[0m"
-		exit
-	fi
-	echo "Vérification de l'existence de $INSTALL_PATH (dossier d'installation)..."
-	if ! [ -d "$INSTALL_PATH" ]
-	then
-		echo -e "\e[31mErreur!\e[0m"
-		exit
-	fi
-	for outil in {make,cmake,meson,ninja,pip3}
-	do
-		echo "Vérification de la présence de $outil..."
-		if ! [ $(command -v $outil) ]
-		then
-			echo -e "\e[93mAttention!\e[0m Il semble que $outil ne soit pas installé sur votre système."
-			echo "Installez-le pour pouvoir utiliser pleinement minpkg."
-		fi
-	done
-	echo -e "\nDébut de l'installation...\n"
+	echo -e "\e[31mErreur!\e[0m Fichier \"minpkg\" introuvable."
+	echo "veuillez lancer ce script depuis le dossier source."
+	exit
 fi
+if [ $INSTALL_KRNLUPD == y ] && ! [ -f krnlupd ]
+then
+	echo -e "\e[31mErreur!\e[0m Fichier \"krnlupd\" introuvable."
+	echo "Veuillez lancer ce script depuis le dossier source."
+	exit
+fi
+echo "Vérification de la présence de bash (dépendance)..."
+if ! [ -f /bin/bash ]
+then
+	echo -e "\e[31mErreur!\e[0m"
+	echo -e "Veuillez installer bash sur votre système."
+	echo -e "Il est fort probable que zsh fonctionne aussi, mais ce n'est pas testé."
+	echo -e "Une simple shell POSIX comme dash ou ash ne sera pas suffisant."
+	exit
+fi
+for dependance in {sed,install,find}
+do
+	echo "Vérification de la présence de $dependance (dépendance)..."
+	if ! [ $(command -v install) ] || ! [ $(command -v sed) ]
+	then
+		echo -e "\e[31mErreur!\e[0m"
+		echo "Veuillez installer $dependance sur votre système."
+		echo "Référez-vous au README.md pour plus d'informations."
+		exit
+	fi
+done
+echo "Vérification de l'existence de $INSTALL_PATH (dossier d'installation)..."
+if ! [ -d "$INSTALL_PATH" ]
+then
+	echo -e "\e[31mErreur!\e[0m"
+	echo "Veuillez spécifier un dossier d'installation valide."
+	exit
+fi
+for outil in {tar,unzip,make,cmake,meson,ninja,pip3,grep,sudo}
+do
+	echo "Vérification de la présence de $outil..."
+	if ! [ $(command -v $outil) ]
+	then
+		echo -e "\e[93mAttention!\e[0m Il semble que $outil ne soit pas installé sur votre système."
+		echo "minpkg n'en a pas strictement besoin, mais cela limitera les fonctionnalités disponibles."
+		echo "COnsultez le README.md pour plus de détails."
+	fi
+done
+echo -e "\nDébut de l'installation...\n"
 
 # Installation de krnlupd:
 if [ $INSTALL_KRNLUPD == y ]
 then
 	# Création du dossier de configuration:
-	sudo mkdir $VERBOSE -p $SYS_CONF_DIR/minpkg/krnlupd
+	install $VERBOSE -dm755 $SYS_CONF_DIR/minpkg/krnlupd
 	if [ $SYS_CONF_DIR != /etc ]
 	then
 		sed -i "s|/etc|$SYS_CONF_DIR|g" krnlupd
 	fi
 
 	# Installation de krnlupd lui-même:
-	sudo install $VERBOSE -m755 krnlupd "$INSTALL_PATH"
-elif [[ $INSTALL_MINPKG == y ]]
+	install $VERBOSE -m755 krnlupd "$INSTALL_PATH"
+
+	# Nettoyage de minpkg:
+	sed -i "s/#KRNLUPD_HOOK//" minpkg
+	sed -i "s/#KRNLUPD_HOOK_END//" minpkg
+elif [ $INSTALL_MINPKG == y ]
 then
-	#Corrections à minpkg si krnlupd n'est pas installé:
+	# Corrections à minpkg si krnlupd n'est pas installé:
 	sed -i "/#KRNLUPD_HOOK/,/#KRNLUPD_HOOK_END/d" minpkg
 fi
 
-# Création des dossiers par utilisateur:
-mkdir $VERBOSE -p ~/.cache/minpkg/{sandbox,sources}
-if [ $CREATE_ROOT_CACHE_DIR == y ] && [ $INSTALL_MINPKG == y ]
-then
-	sudo mkdir $VERBOSE -p /root/.cache/minpkg/{sandbox,sources}
-fi
-
 # Installation globale:
-if [ $INSTALL_MINPKG == y ]
+# Création du dossier d'installation des packages:
+install $VERBOSE -dm755 $PKGS_PATH
+
+# Corrections:
+if [ $PKGS_PATH != /usr/pkgs ]
 then
-	# Création du dossier d'installation des packages:
-	sudo mkdir $VERBOSE -p $PKGS_PATH
-	if [ $PKGS_PATH != /usr/pkgs ]
-	then
-		sed -i "s|/usr/pkgs|$PKGS_PATH|g" minpkg
-	fi
-
-	# Corrections:
-	if [ $DEFAULT_PREFIX != /usr ]
-	then
-		sed -i "s|--prefix=/usr|--prefix=$DEFAULT_PREFIX|g" minpkg
-	fi
-
-	# Installation de minpkg lui-même:
-	sudo install $VERBOSE -m755 minpkg "$INSTALL_PATH"
+	sed -i "s|/usr/pkgs|$PKGS_PATH|g" minpkg
 fi
+if [ $DEFAULT_PREFIX != /usr ]
+then
+	sed -i "s|--prefix=/usr|--prefix=$DEFAULT_PREFIX|g" minpkg
+fi
+
+# Installation de minpkg lui-même:
+install $VERBOSE -m755 minpkg "$INSTALL_PATH"
 
 # Installation terminée!
 echo "Installation terminée!"
