@@ -6,7 +6,7 @@
 
 
 
-version="1.1" # version de krnlupd
+version="1.2" # version de krnlupd
 
 #arch_name= # nom de l'architecture de l'ordinateur
 #os_name # nom (idéalement court) du système d'exploitation
@@ -86,55 +86,107 @@ function configure
 	fi
 	echo -e "   \e[36mDétecté:\e[0m $boot_part\n"
 
-	echo "5. Où est votre fichier de configuration de GRUB?"
-	if [[ -f "$debug_pt/boot/grub/grub.cfg" ]]
+	echo "5. Quel bootloader utilisez-vous?"
+	if [[ -d "$debug_pt/boot/grub" ]] || [[ -f "$debug_pt/boot/grub.cfg" ]]
 	then
-		grub_cfg_file="grub/grub.cfg"
-		echo -e "   \e[36mDétecté:\e[0m /boot/$grub_cfg_file\n"
-	elif [[ -f "$debug_pt/boot/grub.cfg" ]]
+		bootloader="GRUB"
+		echo -e "   \e[36mDétecté:\e[0m GRUB\n"
+	elif [[ $(find "$debug_pt/boot" -name "shell*.efi") ]] || [[ $(find "$debug_pt/boot" -name "Shell*.efi") ]] || [[ $(find "$debug_pt/boot" -name "SHELL*.EFI") ]]
 	then
-		grub_cfg_file="grub.cfg"
-		echo -e "   \e[36mDétecté:\e[0m /boot/$grub_cfg_file\n"
+		bootloader="EFI Shell"
+		echo -e "   \e[36mDétecté:\e[0m EFI Shell\n"
 	else
-		echo "   krnlupd n'a pas trouvé de fichier de configuration GRUB."
-		echo "   Entrez le nom du fichier précédé de son chemin depuis $debug_pt/boot."
-		echo "   N'entrez rien si vous n'utilisez pas GRUB."
-		echo -n "   "
-		read input
-		if ! [[ -z $input ]]
-		then
-			grub_cfg_file="$input"
-			break
-		fi
+		bootloader="unsupported / none";
+		echo "	krnlupd n'a pas pu identifier votre bootloader."
+		echo "	Rassurez-vous, ce n'est vraiment pas grave!"
+		echo "	Cela signifie simplement que krnlupd ne sera pas en mesure de le garder"
+		echo "	  à jour pour vous."
+		echo "	Les seuls bootloaders présentement supportés sont GRUB et EFI Shell."
 	fi
 
-	while [[ 1 ]]
-	do
-		echo "6. Voulez-vous lier un script de mise à jour de votre fichier de configuration de GRUB?"
-		echo "   Si oui, entrez le chemin d'accès complet (sans espace) à ce script maintenant."
-		echo "   Sinon, laissez ce champ vide."
-		echo -n "   "
-		read input
-		if [[ -z $input ]]
+	if [[ "$bootloader" == "GRUB" ]]
+	then
+		echo "6. Où est votre fichier de configuration de GRUB?"
+		if [[ -f "$debug_pt/boot/grub/grub.cfg" ]]
 		then
-			if [[ -f /etc/minpkg/krnlupd/grub_upd_script ]]
-			then
-				rm /etc/minpkg/krnlupd/grub_upd_script
-			fi
-			break
-		elif [[ "$input" == *" "* ]] || ! [[ -f "$input" ]]
+			grub_cfg_file="grub/grub.cfg"
+			echo -e "   \e[36mDétecté:\e[0m /boot/$grub_cfg_file\n"
+		elif [[ -f "$debug_pt/boot/grub.cfg" ]]
 		then
-			echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+			grub_cfg_file="grub.cfg"
+			echo -e "   \e[36mDétecté:\e[0m /boot/$grub_cfg_file\n"
 		else
-			ln -s "$input" /etc/minpkg/krnlupd/grub_upd_script
-			break
+			echo "   krnlupd n'a pas trouvé de fichier de configuration GRUB."
+			echo "   Entrez le nom du fichier précédé de son chemin depuis $debug_pt/boot."
+			echo "   N'entrez rien si vous n'utilisez pas GRUB."
+			echo -n "   "
+			read input
+			if ! [[ -z $input ]]
+			then
+				grub_cfg_file="$input"
+				break
+			fi
 		fi
-	done
-	echo ""
+	elif [[ "$bootloader" == "EFI Shell" ]]
+	then
+		echo "6. Devons-nous créer un script de démarage EFI?"
+		if [[ -f "$debug_pt/boot/startup.nsh" ]]
+		then
+			echo -e "   \e[36mDétecté:\e[0m Non (déjà présent)\n"
+		elif command -v findmnt >> /dev/null
+		then
+			echo "vmlinuz-$krnl_ver-$os_name-$os_ver root=/dev/$(findmnt -n -o SOURCE /) ro quiet" > "$debug_pt/boot/startup.nsh"
+			echo -e "   \e[36mDétecté:\e[0m Oui (via findmnt)\n"
+		elif command -v grep >> /dev/null
+		then
+			#echo "vmlinuz-$krnl_ver-$os_name-$os_ver root=$(grep \" / \" /etc/fstab | sed \"s# /.* ##g\" | sed \"s/ //g\") ro quiet" > "$debug_pt/boot/startup.nsh"
+			echo "vmlinuz-$krnl_ver-$os_name-$os_ver root=$(grep \" / \" /etc/fstab | sed \"s\\ /.* \\\\g\" | sed \"s/ //g\") ro quiet" > "$debug_pt/boot/startup.nsh"
+			echo -e "   \e[36mDétecté:\e[0m Oui (via grep)\n"
+		else
+			echo "	Ni findmnt ni grep ne sont utilisables sur cette machine, ce qui rend impossible la création automatique de startup.nsh."
+			echo "	Vous devrez l'écrire vous-même."
+		fi
+	else
+		echo -e "6. Skipped.\n"
+	fi
 
+	if [[ "$bootloader" != "unsupported / none" ]]
+	then
+		while [[ 1 ]]
+		do
+			echo "7. Voulez-vous lier un script de mise à jour de votre fichier de configuration de GRUB"
+			echo "	 ou de votre script de démarrage EFI?"
+			echo "   Si oui, entrez le chemin d'accès complet (sans espace) à ce script maintenant."
+			echo "   Sinon, laissez ce champ vide."
+			echo -n "   "
+			read input
+			if [[ -z $input ]]
+			then
+				if [[ -f /etc/minpkg/krnlupd/grub_upd_script ]]
+				then
+					rm /etc/minpkg/krnlupd/grub_upd_script
+				fi
+				break
+			elif [[ "$input" == *" "* ]] || ! [[ -f "$input" ]]
+			then
+				echo -e "\e[31mErreur!\e[0m Entrée invalide. Svp réessayer.\n"
+			else
+				ln -s "$input" /etc/minpkg/krnlupd/grub_upd_script
+				break
+			fi
+		done
+		echo ""
+	else
+		echo -e "7. Skipped.\n"
+	fi
+
+	if [[ -L /etc/minpkg/krnlupd/krnl_src ]]
+	then
+		rm /etc/minpkg/krnlupd/krnl_src
+	fi
 	while [[ 1 ]]
 	do
-		echo "7. Ce programme assume que vous avez déjà compilé un kernel manuellement"
+		echo "8. Ce programme assume que vous avez déjà compilé un kernel manuellement"
 		echo "   et que vous en avez conservé les sources."
 		echo "   Entrez maintenant le chemin d'accès complet au dossier où vous les"
 		echo "   avez conservées."
@@ -152,7 +204,7 @@ function configure
 
 	while [[ 1 ]]
 	do
-		echo "8. De quelle version du linux kernel s'agit-il?"
+		echo "9. De quelle version du linux kernel s'agit-il?"
 		echo "   Entrez un numéro de version (normalement sous la forme X.XX, où"
 		echo "   X est un nombre) sans espace et idéalement assez court."
 		echo -n "   "
@@ -169,7 +221,7 @@ function configure
 
 	while [[ 1 ]]
 	do
-		echo -e "9. Voulez-vous que ce programme conserve automatiquement une ancienne version"
+		echo -e "10. Voulez-vous que ce programme conserve automatiquement une ancienne version"
 		echo "   de votre image de boot en tant que backup? (Répondez par oui ou non, y/n.)"
 		echo -n "   "
 		read input
@@ -189,23 +241,24 @@ function configure
 
 	if [[ -v verbose ]]
 	then
-		echo "Écriture de la configuration dans les bons fichiers..."
+		echo "Création du fichier de configuration"
 	fi
 
-	if [[ -v backup ]]
+	echo "krnl_ver=\"$krnl_ver\"" > /etc/minpkg/krnlupd/krnlupd.conf
+	echo "boot_part=\"$boot_part\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "bootloader=\"$bootloader\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	if [[ "$bootloader" == "GRUB" ]]
 	then
-		echo "1" > /etc/minpkg/krnlupd/backup
+		echo "grub_cfg_file=\"$grub_cfg_file\"" >> /etc/minpkg/krnlupd/krnlupd.conf
 	fi
-	echo "$krnl_ver" > /etc/minpkg/krnlupd/krnl_ver
-	echo "$grub_cfg_file" > /etc/minpkg/krnlupd/grub_cfg_file
-	echo "$boot_part" > /etc/minpkg/krnlupd/boot_part
-	echo "$os_ver" > /etc/minpkg/krnlupd/os_ver
-	echo "$os_name" > /etc/minpkg/krnlupd/os_name
-	echo "$arch_name" > /etc/minpkg/krnlupd/arch_name
-	echo "$version" > /etc/minpkg/krnlupd/krnlupd_ver
-	echo ".config" > /etc/minpkg/krnlupd/config_file
-	echo "System.map" > /etc/minpkg/krnlupd/sysmap_file
-	echo "arch/$arch_name/boot/bzImage" > /etc/minpkg/krnlupd/img_file
+	echo "os_name=\"$os_name\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "os_ver=\"$os_ver\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "arch_name=\"$arch_name\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "config_file=\".config\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "sysmap_file=\"System.map\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "img_file=\"arch/$arch_name/boot/bzImage\"" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "backup=$backup" >> /etc/minpkg/krnlupd/krnlupd.conf
+	echo "krnlupd_ver=$version" >> /etc/minpkg/krnlupd/krnlupd.conf
 	touch /etc/minpkg/krnlupd/last_update
 
 	echo -e "\e[32mConfiguration terminée!\e[0m"
@@ -222,8 +275,7 @@ function configure
 	echo "Le fichier d'image de boot du kernel est assumé être nommé bzImage et être placé"
 	echo "  dans le sous-dossier arch/$arch_name/boot/."
 	echo "Si une de ces assomptions est incorrecte, assurez-vous de la modifier en éditant"
-	echo "  les fichiers config_file, sysmap_file et img_file (respectivement) qui viennent"
-	echo "  d'être créés dans le dossier /etc/minpkg/krnlupd/."
+	echo "  le fichier /etc/minpkg/krnlupd/krnlupd.conf."
 	echo "Également, si une valeur n'a pas pu être détectée correctement par ce script ou"
 	echo "  si ce script à détecté une fausse valeur, il est important d'aller la modifier"
 	echo "  manuellement en éditant le bon fichier dans le dossier précédement mentionné."
@@ -235,30 +287,16 @@ function read_config
 {
 	if [[ -v verbose ]]
 	then
-		echo "Lecture des fichiers de configuration..."
-		echo "Lancez $0 --config ou $0 --infos pour afficher ces informations."
+		echo "Lecture des informations..."
+		echo "Lancez $0 --config ou $0 --infos pour les afficher."
 	fi
 
-	if [[ -f /etc/minpkg/krnlupd/backup ]]
-	then
-		backup=1
-	fi
-
-	krnl_ver="$(cat /etc/minpkg/krnlupd/krnl_ver)"
-	grub_cfg_file="$(cat /etc/minpkg/krnlupd/grub_cfg_file)"
-	boot_part="$(cat /etc/minpkg/krnlupd/boot_part)"
-	os_name="$(cat /etc/minpkg/krnlupd/os_name)"
-	os_ver="$(cat /etc/minpkg/krnlupd/os_ver)"
-	arch_name="$(cat /etc/minpkg/krnlupd/arch_name)"
-	krnlupd_ver="$(cat /etc/minpkg/krnlupd/krnlupd_ver)"
-	config_file="$(cat /etc/minpkg/krnlupd/config_file)"
-	sysmap_file="$(cat /etc/minpkg/krnlupd/sysmap_file)"
-	img_file="$(cat /etc/minpkg/krnlupd/img_file)"
+	. /etc/minpkg/krnlupd/krnlupd.conf # contient toutes les informations nécessaires, sauf last_update et krnl_src
 	last_upd="$(cat /etc/minpkg/krnlupd/last_update)"
 }
 
 
-#Gestion des combinaisons d'options:
+# Gestion des combinaisons d'options:
 if [[ -v 1 ]]
 then
 	if [[ $1 == "--verbose" || $1 == "-v" || $1 == "--no-confirm" ]]
@@ -338,7 +376,7 @@ esac
 
 
 #Lecture, écriture et/ou affichage de la configuration:
-if [[ -f /etc/minpkg/krnlupd/krnlupd_ver && $option != "--reset" ]]
+if [[ -f /etc/minpkg/krnlupd/krnlupd.conf && $option != "--reset" ]]
 then
 	read_config
 else
@@ -360,12 +398,16 @@ then
 	echo "OS version:          $os_ver"
 	echo "Architecture:        $arch_name"
 	echo "Boot directory:      $debug_pt/boot"
-	echo "GRUB cfg file:       $debug_pt/boot/$grub_cfg_file"
-	if [[ -e /etc/minpkg/krnlupd/grub_upd_script ]]
+	echo "Bootloader:          $bootloader"
+	if [[ "$bootloader" == "GRUB" ]]
 	then
-		echo "GRUB update script:  yes ($(readlink /etc/minpkg/krnlupd/grub_upd_script))"
+		echo "GRUB cfg file:       $debug_pt/boot/$grub_cfg_file"
+	fi
+	if [[ -e /etc/minpkg/krnlupd/grub_upd_script ]] && [[ "$bootloader" != "unsupported / none" ]]
+	then
+		echo "$bootloader update script:  yes ($(readlink /etc/minpkg/krnlupd/grub_upd_script))"
 	else
-		echo "GRUB update script:  no"
+		echo "$bootloader update script:  no"
 	fi
 	echo "Kernel source:       $(readlink /etc/minpkg/krnlupd/krnl_src)"
 	if [[ -v verbose ]]

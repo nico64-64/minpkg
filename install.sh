@@ -159,8 +159,8 @@ then
 	install $VERBOSE -m755 krnlupd "$INSTALL_PATH"
 
 	# Nettoyage de minpkg:
-	sed -i "s/#KRNLUPD_HOOK//" minpkg
 	sed -i "s/#KRNLUPD_HOOK_END//" minpkg
+	sed -i "s/#KRNLUPD_HOOK//" minpkg
 elif [ $INSTALL_MINPKG == y ]
 then
 	# Corrections à minpkg si krnlupd n'est pas installé:
@@ -188,6 +188,3 @@ install $VERBOSE -m755 minpkg "$INSTALL_PATH"
 echo "Installation terminée!"
 echo "Si vous n'avez pas reçu aucun message d'erreur durant l'installation,"
 echo "  vous pouvez supprimer ce répertoire."
-echo "Toutefois, si vous prévoyez que d'autres utilisateurs utiliseront minpkg pour"
-echo "  installer des packages, chacun d'entre eux devrait lancer ce script avec"
-echo "  --without-installing afin de générer leur dossier de cache personnel."

@@ -10,7 +10,7 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.4 #version du programme
+version=1.6.5 #version du programme
 
 #Options
 build_system="make" #indique le build system à utiliser
