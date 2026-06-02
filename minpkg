@@ -10,7 +10,7 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.5 #version du programme
+version=1.6.6 #version du programme
 
 #Options
 build_system="make" #indique le build system à utiliser
@@ -44,12 +44,14 @@ sudo="" #commande à utiliser pour obtenir les droits de superuser (vide si on e
 #desinstallation (indique au programme que la commande remove a été entrée)
 #reparation (indique au programme que la commande restore a été entrée)
 #infos (indique au programme que la commande infos a été entrée)
+#find (indique l'opération find)
+#sizeof (indique l'opération sizeof)
 #describe (indique au programme que la commande describe a été entrée)
 #update_kernel (indique au programme que la commande kernel a été entrée) (appel à krnlupd)
 #show_kernel_infos (indique au programme que la commande kernel-infos a été entrée) (appel à krnlupd)
 
 #Nettoyage préliminaire
-unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtool no_cleaning insecure dryrun no_confirm fix_aclocal repair_latest installation desinstallation reparation infos find describe pkg_descr archiveur_magique strip_cmd archive_name install_cmd destdir_prefix reset_krnlupd revert_kernel_update new_kernel update_kernel show_kernel_infos show_krnlupd_config
+unset keep_source no_build_dir simulation keep_old no_strip remove_static_libtool no_cleaning insecure dryrun no_confirm fix_aclocal repair_latest installation desinstallation reparation infos find sizeof describe pkg_descr archiveur_magique strip_cmd archive_name install_cmd destdir_prefix reset_krnlupd revert_kernel_update new_kernel update_kernel show_kernel_infos show_krnlupd_config
 
 
 
@@ -1471,8 +1473,16 @@ do
 			echo -e "Vous pouvez entrer minpkg list pour obtenir la liste des packages installés par minpkg.\n"
 		fi
 
+	elif [[ -v sizeof ]] && [[ $arg != -* ]]
+	#Nouveau package dont on veut connaître la taille
+	then
+		if [[ -d "/usr/pkgs/$arg" ]]
+		then
+			echo $arg occupe $(du -sh "/usr/pkgs/$arg" | sed "s|\t/usr/.*||g") d\'espace disque
+		fi
+
 	elif [[ $versionnage -eq 1 ]] && [[ $arg != -* ]]
-	#Nouveau package dont il faut afficher la version actuelle:
+	#Nouveau package dont il faut afficher la version actuelle
 	then
 		if [[ -d "/usr/pkgs/$arg" ]]
 		then
@@ -1484,7 +1494,7 @@ do
 		fi
 
 	elif [[ $versionnage -eq 2 ]] && [[ $arg != -* ]]
-	#Nouveau package dont il faut afficher la liste des versions installées:
+	#Nouveau package dont il faut afficher la liste des versions installées
 	then
 		if [[ -d "/usr/pkgs/$arg" ]]
 		then
@@ -1496,7 +1506,7 @@ do
 		fi
 
 	else
-	#Nouvelle commande ou nouvel argument:
+	#Nouvelle commande ou nouvel argument
 		if [[ $arg == ll ]]
 		then
 			verbose=--verbose
@@ -1513,6 +1523,7 @@ do
 			echo -e "describe\tmodifie la description de packages installés"
 			echo -e "find\t\tcherche si les packages spécifiés sont installés"
 			echo -e "infos\t\taffiche quelques informations sur des packages installés"
+			echo -e "sizeof\t\taffiche l'espace disque occupé par des packages installés"
 			echo -e "install (+)\tinstalle ou met à jour des packages"
 			echo -e "list (ls / ll)\taffiche la liste des packages installés par minpkg"
 			echo -e "remove (-)\tdésinstalle des packages"
@@ -1934,6 +1945,10 @@ do
 			reparation=1
 			;;
 
+		size | sizeof | taille | poids)
+			sizeof=1;
+			;;
+
 		version)
 			versionnage=1
 			;;
@@ -2074,7 +2089,7 @@ then
 	krnlupd $verbose $show_krnlupd_config --infos
 #KRNLUPD_HOOK_END
 
-elif [[ $versionnage -eq 0 ]] && [[ ! -v infos ]] && [[ ! -v describe ]] && [[ ! -v find ]]
+elif [[ $versionnage -eq 0 ]] && [[ ! -v infos ]] && [[ ! -v describe ]] && [[ ! -v find ]] && [[ ! -v sizeof ]]
 # Une option d'installation/désinstallation a été fournie sans aucune commande:
 then
 	echo -e "\e[31mErreur:\e[0m Vous devez fournir une commande pour appliquer ces options."

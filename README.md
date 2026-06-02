@@ -30,23 +30,24 @@ En date de la version 1.6.4, minpkg supporte les systèmes suivants:
 ## Installation
 
 ### Dépendances:
-En plus de coreutils et util-linux, vous aurez besoin des programmes suivant:
-- bash (zsh fonctionnerait probablement aussi, mais ce n'est pas testé)
-- sed
-- install (compatible BSD)
-- find
+En plus de **coreutils** et **util-linux**, vous aurez *absolument* besoin des programmes suivant:
+- **bash** (zsh fonctionnerait probablement aussi, mais ce n'est pas testé)
+- **sed**
+- **find**
 
-Les programmes suivants ne sont pas strictement nécessaire, mais apportent des fontionnalités parfois essentielles:
-- tar (avec gzip, bz2, xz, etc.) (pour décompresser les sources)
-- unzip (pour décompresser les sources)
-- cmake (pour configurer les packages)
-- meson (pour configurer les packages)
-- make (pour construire et installer les packages, ainsi que mettre à jour le kernel)
-- ninja (pour construire et installer les packages)
-- pip3 (pour construire et installer des packages avec pip3)
-- grep (pour la commande find de minpkg)
-- sudo (pour utiliser minpkg en tant qu'usager normal)
-- un éditeur de texte (pour la commande describe de minpkg)
+Les programmes suivants ne sont *pas strictement nécessaires*, mais apportent des fonctionnalités très utiles, voire essentielles:
+- **tar** (avec **gzip**, **bz2**, **xz**, etc.) (pour décompresser la plupart des sources)
+- **unzip** (version BSD recommandée) (pour décompresser certaines sources)
+- **cmake** (pour configurer certains packages)
+- **meson** (pour configurer certains packages)
+- **make** (GNU make recommandé) (pour construire et installer la plupart des packages ainsi que mettre à jour votre kernel)
+- **ninja** (pour construire et installer certains packages)
+- **grep** (pour la commande find de minpkg)
+- un **éditeur de texte** (pour la commande describe de minpkg)
+
+Les programmes suivants apportent des *fonctionnalités supplémentaires* qui ne sont pas toujours nécessaires:
+- **pip3** (pour construire et installer des packages avec pip3)
+- **sudo** (pour utiliser minpkg en tant qu'usager normal)
 
 ### Installation standard:
 Clonez ce repo avec git, puis lancez l'installation de minpkg en exécutant simplement le script fourni:
@@ -60,7 +61,8 @@ Si vous ne recevez aucune erreur, vous pouvez ensuite supprimer les fichiers té
 **Note:** Un `Attention!`(jaune) n'est pas une `Erreur!`(rouge)! Vous pouvez ignorer les premiers sans problème.
 
 ### Installation personnalisée:
-Lancez le script d'installation avec la commande `./install.sh --help` pour obtenir la liste des options acceptées.<br>
+Lancez le script d'installation avec la commande `./install.sh --help` pour obtenir la liste des options acceptées.
+
 Les options les plus utiles et sont expliquées ici:
 
 `--default-prefix=...`: minpkg utilise l'option `--prefix=...` lors de la configuration des packages. Par défaut, ce préfixe est /usr, mais vous pouvez le changer ici (par exemple en spécifiant `--prefix=/usr/local` si vous ne voulez pas mélanger les packages installés par minpkg avec ceux installés par votre package manager système).
@@ -68,8 +70,7 @@ Les options les plus utiles et sont expliquées ici:
 `--pkgs-path=...`: Cette option permet de changer l'endroit où sont réellement installés les packages.<br>
 Il n'y a pas vraiment de raison de changer la valeur par défaut (/usr/pkgs).
 
-Une fois que vous avez trouvé quelles options doivent être utilisées, lancez le script d'installation avec elles.<br>
-Si vous n'avez pas reçu d'erreur, vous pouvez ensuite supprimer les fichiers téléchargés si vous le voulez.
+Si vous n'avez pas reçu d'erreur à l'exécution du script, vous pouvez supprimer les fichiers téléchargés si vous le voulez.
 
 ## Usage
 
@@ -89,7 +90,7 @@ Par défaut, minpkg créera aussi un nouveau dossier nommé "build" à l'intéri
 
 Par défaut, minpkg tente aussi d'enlever les symboles de débogage, mais cela ne fonctionne pas toujours. Si vous recevez une erreur de type "no target for 'install-strip'", installez le package avec `--no-strip`.
 
-Il peut parfois être utile de décompresser soi-même le package puis de lui appliquer des modifications (comme une patch) avant de l'installer avec minpkg. Dans ce cas, si le package utilise autoconf pour se configurer, il est fort probable que la construction avec minpkg échoue avec une erreur de type "aclocal not found". Cela est causé par le fait que minpkg copie d'abord les sources avant de les utiliser. Cela réinitialise les timestamps des fichiers, et autoconf juge donc qu'il doit regénérer ces fichiers, et cela nécessite une certaine version d'autoconf qui n'est pas celle que vous avez installée. Par contre, ces fichiers n'ont souvent pas réellement besoin d'être regénérés. minpkg fournit donc une option (`--fix-aclocal`) qui ajuste les timestamps des fichiers nécessaires pour contenter autoconf.
+Il peut parfois être utile de décompresser soi-même le package, puis de lui appliquer des modifications (comme une patch) avant de l'installer avec minpkg. Dans ce cas, si le package utilise autoconf pour se configurer, il est fort probable que la construction avec minpkg échoue avec une erreur de type "aclocal not found". Cela est causé par le fait que minpkg copie d'abord les sources avant de les utiliser. Cela réinitialise les timestamps des fichiers, et autoconf juge donc qu'il doit regénérer ces fichiers, et cela nécessite une certaine version d'autoconf qui n'est pas installée sur votre machine. Par contre, ces fichiers n'ont souvent pas vraiment besoin d'être regénérés. minpkg fournit donc une option (`--fix-aclocal`) qui ajuste les timestamps des fichiers nécessaires pour contenter autoconf.
 
 Vous pouvez aussi construire vos packages sans les installer pour d'abord vérifier si minpkg est bien capable de les construire. Utilisez pour cela `--simulate` (`-s`).
 
