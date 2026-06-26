@@ -10,7 +10,7 @@
 # minpkg --fonctionnement explique bien comment ce programme fonctionne.
 
 
-version=1.6.6 #version du programme
+version=1.6.7 #version du programme
 
 #Options
 build_system="make" #indique le build system à utiliser
@@ -335,7 +335,7 @@ function installer
 
 	if [[ -z $pkg_name ]] || [[ -z $pkg_version ]]
 	then
-		echo -e "\e[31mErreur!\e[0m Vous devez fournir un nom de package et une version non-vides."
+		echo -e "\e[31mErreur!\e[0m Vous devez fournir un nom de package et une version non vides."
 		echo -e "Installation \e[31mannulée\e[0m.\n"
 		return
 	fi
@@ -1074,7 +1074,7 @@ function uninstaller ()
 			echo -e "\n\e[93mAttention!\e[0m Vous venez de supprimer la version en usage de $pkg_name."
 			echo "Sauf si vous voulez supprimer complètement ce package ou le réinstaller,"
 			echo "  vous devriez le réparer avec minpkg restore $pkg_name."
-			echo "Sinon, il se peut que le package soit maintenant non-fonctionnel."
+			echo "Sinon, il se peut que le package soit maintenant non fonctionnel."
 		fi
 		if [[ ! -v dryrun ]]
 		then
@@ -1106,7 +1106,7 @@ function uninstaller ()
 			echo -e "\n\e[93mAttention!\e[0m Vous venez de supprimer la version en usage de $pkg_name."
 			echo "Sauf si vous voulez supprimer complètement ce package ou le réinstaller,"
 			echo "  vous devriez le réparer avec minpkg restore $pkg_name."
-			echo "Sinon, il se peut que le package soit maintenant non-fonctionnel."
+			echo "Sinon, il se peut que le package soit maintenant non fonctionnel."
 		fi
 
 	else #plusieurs versions installées, mais on n'a pas supprimée celle dans .version
@@ -1292,7 +1292,7 @@ do
 		perso)
 			build_system=ask
 			;;
-		*) #système non-supporté (erreur)
+		*) #système non supporté (erreur)
 			break;
 		esac
 
@@ -1312,7 +1312,7 @@ do
 		perso)
 			config_system=ask
 			;;
-		*) #système non-supporté (erreur)
+		*) #système non supporté (erreur)
 			break;
 		esac
 
@@ -1340,7 +1340,7 @@ do
 			test_system=none
 			;;
 
-		*) #système non-supporté (erreur)
+		*) #système non supporté (erreur)
 			break;
 		esac
 
@@ -1376,7 +1376,7 @@ do
 			install_system=none
 			;;
 
-		*) #système non-supporté (erreur)
+		*) #système non supporté (erreur)
 			break;
 		esac
 
@@ -1400,7 +1400,7 @@ do
 			archiver=none
 			;;
 
-		*) #système non-supporté (erreur)
+		*) #système non supporté (erreur)
 			break;
 		esac
 
@@ -1519,9 +1519,9 @@ do
 			echo -e "Usage: minpkg [--options] [commande]\n"
 
 			echo -e "Commandes acceptées:"
-			echo -e "help\t\taffiche ce message"
 			echo -e "describe\tmodifie la description de packages installés"
 			echo -e "find\t\tcherche si les packages spécifiés sont installés"
+			echo -e "help\t\taffiche ce message"
 			echo -e "infos\t\taffiche quelques informations sur des packages installés"
 			echo -e "sizeof\t\taffiche l'espace disque occupé par des packages installés"
 			echo -e "install (+)\tinstalle ou met à jour des packages"
@@ -1537,7 +1537,7 @@ do
 
 			echo -e "\nOptions générales:"
 			echo -e "--help (-?)\taffiche ce message"
-			echo -e "--no-confirm\tne demande jamais de confirmation (non-recommandé)"
+			echo -e "--no-confirm\tne demande jamais de confirmation (non recommandé)"
 			echo -e "--simulate (-s)\texécute la commande spécifiée sans altérer le système"
 			echo -e "--understand\taffiche un petit texte expliquant les grandes lignes"
 			echo -e "\t\tdu fonctionnement de minpkg"
@@ -1592,11 +1592,6 @@ do
 			echo -e "\t\t(implique --verbose et est incompatible avec --no-confirm)"
 			echo -e "--no-cleaning\tne nettoie pas la sandbox derrière lui"
 			echo -e "\t\t(ne s'applique qu'avec la commande install)"
-
-			echo -e "\nVous pouvez exécuter minpkg en tant que root ou bien en tant qu'utilisateur"
-			echo -e "  ordinaire."
-			echo -e "Si vous exécutez minpkg en tant qu'utilisateur normal,"
-			echo -e "  minpkg utilisera sudo pour obtenir les privilèges nécessaires au besoin.\n"
 			exit
 			;;
 
@@ -1604,7 +1599,7 @@ do
 			echo "Fonctionnement général de minpkg, le package manager minimal"
 			echo "----------------------------------------------------------------------------------------------------------------------"
 			echo "Note: Ce texte n'a pas pour but de tout expliquer en détail, mais plutôt d'expliquer l'idée générale derrière minpkg."
-			echo "A jour pour la version 1.6"
+			echo "Texte à jour pour la version 1.6"
 			echo "----------------------------------------------------------------------------------------------------------------------"
 			echo ""
 			echo "Comme son nom l'indique, minpkg a pour but de rester un package manager MINIMAL et facile à comprendre."
@@ -1612,42 +1607,43 @@ do
 			echo "  compilés soi-même (mais pas seulement) tout en restant assez transparent et facile à comprendre."
 			echo "minpkg est écrit en Bash (en un seul fichier de quelques 2000 lignes), ce qui en facilite la compréhension,"
 			echo "  mais surtout, la reproduction manuelle dans un terminal."
-			echo "À cause de sa nature minimaliste, minpkg ne couvre pas aussi large qu'un package manager ordinaire,"
-			echo "  et il est inévitable que certaines opérations ne fonctionneront pas toujours et que d'autres devront"
-			echo "  éventuellement se faire manuellement."
-			echo "Je ne suggèrerais pas d'utiliser minpkg pour gérer son gcc ou sa glibc, par exemple."
+			echo "À cause de sa nature minimaliste, minpkg ne couvre pas aussi large qu'un package manager ordinaire."
+			echo "Il est inévitable que certaines opérations ne fonctionneront pas toujours et que d'autres devront se"
+			echo "  faire manuellement."
+			echo "Je ne suggèrerais pas d'utiliser minpkg pour gérer des packages aussi critiques, complexes et pointilleux"
+			echo "  que gcc ou la glibc, par exemple."
 			echo ""
 			echo "Lorsque vous installez ou désinstallez un package avec minpkg, le gros de l'action se passe à 2 endroits:"
 			echo "Premièrement, dans le dossier /usr/pkgs/, qui contient tous les packages installés par minpkg,"
 			echo "  et deuxièmement, dans le dossier ~/.cache/minpkg/, qui contient des fichiers temporaires."
 			echo "À cela s'ajoute ce script lui-même, probablement placé dans /usr/bin."
 			echo ""
-			echo "Chaque package installé a un dossier dédié dans /usr/pkgs/."
+			echo "Chaque package est installé dans un dossier dédié dans /usr/pkgs/."
 			echo "Chacun de ces dossiers contient un fichier .version et un dossier par version installée."
-			echo "Le fichier .version indique quelle version est actuellement en usage (bien qu'elles le soient toutes)."
-			echo "La liste des packages ou des versions installé(e)s est donc simplement la liste des dossiers dans /usr/pkgs(/NOM)/."
-			echo "Chaque dossier /usr/pkgs/NOM/VERSION/ contient un fichier infos.minpkg, peut-etre un fichier source.minpkg et"
-			echo "  un fichier install.log (détaillant le processus d'installation) et les modifications à apporter à / pour"
-			echo "  installer le package (c'est-à-dire les nouveaux fichiers à copier dans les dossiers /usr, /etc et autres)."
-			echo "Par contre, ces fichiers ne sont pas réellement copiés au bon endroit."
-			echo "Un lien symbolique est plutôt créé à l'endroit correspondant dans / vers sa contrepartie dans /usr/pkgs/NOM/VERSION."
+			echo "Le fichier .version indique quelle version est la plus récente. (C'est un peu plus compliqué que ça...)"
+			echo "La liste des packages ou des versions installé(e)s est donc simplement la liste des dossiers dans /usr/pkgs/(NOM/)."
+			echo "Chaque dossier /usr/pkgs/NOM/VERSION/ contient un fichier infos.minpkg, peut-être un fichier source.minpkg, ainsi"
+			echo "  qu'un fichier install.log (détaillant le processus d'installation) et les modifications apportées à / pour"
+			echo "  installer le package (c'est-à-dire les nouveaux fichiers installés dans les dossiers /usr, /etc et autres)."
+			echo "Par contre, ces fichiers ne sont pas réellement copiés à ces endroits."
+			echo "minpkg créé plutôt un lien symbolique à l'endroit correspondant dans / vers sa contrepartie dans"
+			echo "  /usr/pkgs/NOM/VERSION, où sont réellement installés les fichiers."
 			echo ""
 			echo "Pour ce qui est du dossier ~/.cache/minpkg/, il peut contenir plusieurs choses:"
 			echo "D'abord, des fichiers install.log, repair.log et uninstall.log détaillant les derniers processus correspondants,"
-			echo "  puis un dossier source contenant les copies des packages sauvegardes (s'il y en a)"
-			echo "  et enfin, un dossier nommé sandbox qui est utilisé par minpkg pour décompresser, configurer et construire"
-			echo "  les packages lors de leur installation (cela évite de polluer le répertoire d'où a été lancée la commande"
-			echo "  ou d'y supprimer des fichiers par accident)."
+			echo "  puis un dossier source contenant les copies des packages sauvegardés (s'il y en a) et enfin, un dossier nommé"
+			echo "  sandbox qui est utilisé par minpkg pour décompresser, configurer et construire les packages lors de leur"
+			echo "  installation (ce qui évite de polluer le répertoire d'où a été lancée la commande)."
 			echo ""
 			echo "minpkg offre différentes commandes permettant entre autre d'installer (install) et de désinstaller (remove)"
-			echo "  des packages, mais aussi de réparer (restore) et d'obtenir des informations sur les packages installés."
+			echo "  des packages, mais aussi de réparer (repair) et d'obtenir des informations sur les packages installés."
 			echo "À part ces 3 premières commandes, les autres ne sont souvent que des petits wrappers autour d'un cat ou d'un ls."
 			echo ""
 			echo "minpkg fournit aussi plusieurs options de ligne de commande qui permettent entre autre de préciser comment"
 			echo "  un package devrait être décompressé (-a), configuré (-c), construit (-b), testé (-t) et installé (-i)."
 			echo "Par défaut, minpkg détecte automatiquement le type d'archive (grâce à son extension) à décompresser (ou pas)"
-			echo "  et utilise ./configure pour configurer, make check pour tester et make && make install pour construire et"
-			echo "  installer (make install est déduit automatiquement depuis la commande de construction)."
+			echo "  et utilise ./configure pour configurer et make && make install pour construire et installer (où make install"
+			echo "  est déduit automatiquement depuis la commande de construction)."
 			echo "Vous pouvez même simuler l'installation d'un package (-s), ce qui arrêtera le processus juste avant l'installation."
 			echo ""
 			echo "Si vous êtes tannés de devoir entrer manuellement le nom et la version de chaque package que vous installez,"
@@ -1661,19 +1657,19 @@ do
 			echo "  (dans ce cas, vous devrez réparer le package pour compléter son installation et le rendre fonctionnel)."
 			echo ""
 			echo "minpkg vient normalement aussi avec un outil de mise à jour du kernel, nommé krnlupd. Il s'agit d'un autre script"
-			echo "  bash que minpkg appelle lorsque vous entres la commande minpkg kernel. Vous pouvez aussi l'exécuter directement"
+			echo "  bash que minpkg appelle lorsque vous entrez la commande minpkg kernel. Vous pouvez aussi l'exécuter directement"
 			echo "  si vous le voulez. Toutes ses fonctionnalités sont accessibles à travers minpkg, mais si vous voulez comprendre"
 			echo "  son fonctionnement, l'exécuter séparément avec --help ou -? serait certainement utile."
 			echo "krnlupd est aussi la raison pour laquelle le répertoire /etc/minpkg/ existe. krnlupd y stocke ses informations de"
 			echo "  de configuration ainsi que la date et l'heure du dernier build du kernel, tout ça dans le sous-dossier à son nom"
-			echo "  qui s'y trouve. Ces fichiers sont générés à la première exécution de krnlupd et lorsqu'il est démarré avec --reset."
-			echo "krnlupd est un outil complètement facultatif qui peut être désactivé lors de l'installation de minpkg. Si c'est le"
-			echo "  cas, ici et dans les commentaires du code de minpkg seront les seules références que vous pourrez trouver."
+			echo "  Ces fichiers sont générés à la première exécution de krnlupd ou lorsqu'il est démarré avec --reset."
+			echo "krnlupd est un outil complètement facultatif qui peut être désactivé lors de l'installation de minpkg. Si vous le"
+			echo "  faites, ici et dans les commentaires du code de minpkg seront les seules références que vous pourrez trouver."
 			echo ""
 			echo "Pour en savoir plus, n'hésitez pas à aller lire le code source de minpkg!"
 			echo ""
 			echo "Nicolas Audette"
-			echo "23/03/2026"
+			echo "Mars 2026"
 			echo ""
 			exit
 			;;
@@ -1681,73 +1677,87 @@ do
 		--archiver-help | --archiveur-help | --aide-archiver | --aide-archiveur)
 			echo -e "Usage: minpkg --archiver ARCHIVEUR\n   ou  minpkg -a ARCHIVEUR\n"
 
-			echo -e "minpkg peut décompresser votre package pour vous, mais pour cela, vous devez lui dire quel archiveur utiliser.\n"
+			echo -e "minpkg peut décompresser votre package pour vous, mais pour cela, vous devez lui"
+			echo -e "  dire quel archiveur utiliser.\n"
 
 			echo "Les archiveurs suivants sont supportés:"
-			echo -e "magic / magique\ttente de déterminer automatiquement le type d'archive pour chaque paquet"
-			echo -e "tar\t\ttar -xf (pour les archives .tar et .tar.*) (valeur par défaut si magic ne réussis pas à identifier le type d'archive)"
+			echo -e "magic / magique\tTente de déterminer automatiquement le type d'archive (par défaut)"
+			echo -e "tar\t\ttar -xf (pour les archives .tar et .tar.*) (par défaut si magic"
+			echo -e "\t\tne réussit pas à identifier le type d'archive)"
 			echo -e "zip / unzip\tunzip (pour les archives .zip)"
-			echo -e "none / aucun\tpour les packages n'ayant pas besoin d'être décompressés"
+			echo -e "none / aucun\tPour les packages n'ayant pas besoin d'être décompressés"
 
-			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et n'a aucun effet si aucun package n'est installé."
-			echo "L'utilisation de cette option devrait être réservée à certains cas particuliers seulement."
+			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et"
+			echo -e "  n'a aucun effet si aucun package n'est installé."
+			echo -e "Cette option n'est habituellement pas nécessaire."
 			exit
 			;;
 
 		--build-help | --aide-build)
 			echo -e "Usage: minpkg --build BUILD_SYSTEM\n   ou  minpkg -b BUILD_SYSTEM\n"
 
-			echo -e "minpkg supporte plusieurs systèmes de build, et vous pouvez utiliser cette option pour spécifier lequel vous voulez utiliser.\n"
+			echo -e "minpkg supporte plusieurs systèmes de build"
+			echo -e "Vous pouvez utiliser cette option pour spécifier lequel utiliser.\n"
 
 			echo "Les systèmes supportés sont les suivants:"
-			echo -e "make\t\tmake (par défaut)"
-			echo -e "make_html\tmake && make html (construit aussi la documentation html du package)"
-			echo -e "ninja\t\tninja"
-			echo -e "pip3\t\tpip3 wheel (implique --no-build-dir) (ne devrait pas être combiné à --simulate)"
-			echo -e "ask / perso\tune commande de build sera demandée au moment opportun"
-			echo -e "none / aucun\taucun build nécessaire (le package est déjà compilé/construit)"
+			echo -e "make\t\tUtilise le système de construction make (par défaut)"
+			echo -e "make_html\tConstruit le package et sa documentation html avec make"
+			echo -e "ninja\t\tUtilise le système de construction ninja"
+			echo -e "pip3\t\tUtilise le système construction pip3 wheel"
+			echo -e "\t\t(implique --no-build-dir; ne pas le combiner à --simulate)"
+			echo -e "ask / perso\tUne commande de build sera demandée au moment opportun"
+			echo -e "none / aucun\tAucun build nécessaire (le package est déjà compilé/construit)"
 
-			echo -e "\nSi votre package utilise cmake, configurez-le avec cmake, mais utilisez l'option make pour le construire."
+			echo -e "\nSi votre package utilise cmake, configurez-le avec cmake, mais utilisez make"
+			echo -e "  pour le construire."
 
-			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et n'a aucun effet si aucun package n'est installé."
+			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et"
+			echo -e "n'a aucun effet si aucun package n'est installé."
 			exit
 			;;
 
-		--config-help | --aide-config)
+		--config-help | --configure-help | --aide-config)
 			echo -e "Usage: minpkg --config CONFIG_SYSTEM\n   ou  minpkg -c CONFIG_SYSTEM\n"
 
 			echo "minpkg peut configurer les packages des façons suivantes:"
-			echo -e "configure_full\téquivalent à ./configure avec plusieurs arguments (par défaut)"
-			echo -e "configure\téquivalent à ./configure avec les arguments essentiels seulement"
-			echo -e "cmake\t\téquivalent à cmake (arguments essentiels seulement)"
-			echo -e "meson\t\téquivalent à meson setup (arguments essentiels seulement)"
-			echo -e "perl\t\téquivalent à perl Makefile.PL (implique --no-build-dir) (déprécié)"
-			echo -e "ask / perso\tune commande de configuration sera demandée au moment opportun"
-			echo -e "none / aucun\taucune configuration nécessaire"
+			echo -e "configure_full\tConfigure le package le mieux possible avec le script configure"
+			echo -e "\t\tdes autotools (par défaut)"
+			echo -e "configure\tMême chose, mais en s'en tenant à l'essentiel"
+			echo -e "cmake\t\tConfigure le package avec cmake"
+			echo -e "meson\t\tConfigure le package avec meson setup"
+			echo -e "perl\t\tConfigure le package avec perl Makefile.PL"
+			echo -e "\t\t(implique --no-build-dir) (\e[31mdéprécié!\e[0m)"
+			echo -e "ask / perso\tUne commande de configuration sera demandée au moment opportun"
+			echo -e "none / aucun\tAucune configuration nécessaire"
 
-			echo -e "\nVous pouvez aussi ajouter des arguments aux commandes en définissant la variable environnementale CONFIGURE_ARGS."
-			echo -e "Exemple: CONFIGURE_ARGS=\"-D with-xxxx=yes\" minpkg install package.tar.xz -c meson -b ninja"
+			echo -e "\nVous pouvez aussi ajouter des arguments aux commandes en définissant la"
+			echo -e "  variable environnementale CONFIGURE_ARGS."
+			echo -e "Exemple:\nCONFIGURE_ARGS=\"-D with-X=yes\" minpkg install package.tar.xz -c meson -b ninja"
 
-			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et n'a aucun effet si aucun package n'est installé."
+			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et"
+			echo -e "  n'a aucun effet si aucun package n'est installé."
 			exit
 			;;
 
 		--test-help | --aide-test)
 			echo -e "Usage: minpkg --test TEST_SYSTEM\n   ou  minpkg -t TEST_SYSTEM\n"
 
-			echo -e "minpkg peut exécuter la suite de tests d'un package si celui-ci en fournit une, mais vous devez spécifier comment ces tests doivent être réalisés\n"
+			echo -e "minpkg peut exécuter la suite de tests d'un package si celui-ci en fournit"
+			echo -e "  une, mais vous devez spécifier comment ces tests doivent être réalisés\n"
 
 			echo "Les systèmes supportés sont les suivants:"
-			echo -e "make_check\texécute make check entre make et make install"
-			echo -e "make_test\texécute make test entre make et make install"
-			echo -e "ninja_test\texécute ninja test entre ninja et ninja install"
-			echo -e "ask / perso\tune commande de test sera demandée au moment opportun"
-			echo -e "none / aucun\taucun test nécessaire (par défaut)"
+			echo -e "make_check\tExécute make check entre make et make install"
+			echo -e "make_test\tExécute make test entre make et make install"
+			echo -e "ninja_test\tExécute ninja test entre ninja et ninja install"
+			echo -e "ask / perso\tUne commande de test sera demandée au moment opportun"
+			echo -e "none / aucun\tAucun test nécessaire (par défaut)"
 
-			echo -e "\n\e[93mAttention!\e[0m Certains tests doivent impérativement être exécutés en tant que root ou en tant qu'utilisateur ordinaire."
-			echo "N'oubliez pas de démarrer minpkg avec les privilièges conséquents."
+			echo -e "\n\e[93mAttention!\e[0m Certains tests doivent impérativement être exécutés en tant que"
+			echo -e "  root ou en tant qu'utilisateur ordinaire."
+			echo -e "N'oubliez pas de démarrer minpkg avec les privilièges conséquents."
 
-			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et n'a aucun effet si aucun package n'est installé."
+			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et"
+			echo -e "  n'a aucun effet si aucun package n'est installé."
 			exit
 			;;
 
@@ -1755,20 +1765,23 @@ do
 			echo -e "Usage: minpkg --install INSTALL_SYSTEM\n   ou  minpkg -i INSTALL_SYSTEM\n"
 
 			echo "minpkg peut installer votre package des manières suivantes:"
-			echo -e "magic / magique\t\tutilise la technique d'installation liée au build (par défaut)"
-			echo -e "make_destdir / make\tinstalle le package avec make DESTDIR=... install"
-			echo -e "make_html\t\tinstalle le package avec make DESTDIR=... install && make DESTDIR=... install-html"
-			echo -e "make_prefix\t\tinstalle le package avec make PREFIX=... install (non-recommandé)"
-			echo -e "ninja\t\t\tinstalle le package avec DESTDIR=... ninja install"
-			echo -e "pip3\t\t\tinstalle le package avec pip3 install (ATTENTION: ce package sera geré par pip3 et non minpkg!)"
-			echo -e "ask / perso\t\tune commande d'installation sera demandée au moment opportun"
-			echo -e "none / aucun\t\tcopie (et lie) simplement les fichiers au bon endroit"
+			echo -e "magic / magique\t\tUtilise la méthode d'installation liée au système"
+			echo -e "\t\t\tde build (par défaut)"
+			echo -e "make_destdir / make\tInstalle le package avec make en spécifiant un DESTDIR"
+			echo -e "make_html\t\tMême chose, mais installe aussi la documentation"
+			echo -e "\t\t\thtml du package"
+			echo -e "make_prefix\t\tComme make, mais utilise PREFIX au lieu de DESTDIR"
+			echo -e "\t\t\t(\e[93mà utiliser dans certains cas particuliers seulement!\e[0m)"
+			echo -e "ninja\t\t\tInstalle le package avec ninja en spécifiant un DESTDIR"
+			echo -e "pip3\t\t\tInstalle le package avec pip3"
+			echo -e "\t\t\t(\e[93mCe package sera geré par pip3 et non minpkg!\e[0m)"
+			echo -e "ask / perso\t\tUne commande d'installation sera demandée au moment"
+			echo -e "\t\t\topportun"
+			echo -e "none / aucun\t\tCopie simplement les fichiers au bon endroit"
 
-			echo -e "\nL'option par défaut magic utilisera par exemple la commande \"make install\" si le système de build est make"
-			echo "ou la technique d'installation \"none\" s'il s'agit aussi de la technique de build."
-
-			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et n'a aucun effet si aucun package n'est installé."
-			echo "L'utilisation de cette option devrait être réservée à certains cas particuliers seulement."
+			echo -e "\nCette option s'applique à tous les packages installés avec cette commande et"
+			echo -e "  n'a aucun effet si aucun package n'est installé."
+			echo "Cette option n'est habituellement pas nécessaire."
 			exit
 			;;
 
@@ -1786,7 +1799,7 @@ do
 
 		--dryrun | --no-symlinks)
 			#Lorsque cette option est utilisée, la réinstallation des packages ne fonctionnera pas puisque la suppression de l'ancienne copie sera elle aussi simulée.
-			#Le comportement est alors non-défini. Svp évitez cela...
+			#Le comportement est alors non défini. Svp évitez cela...
 			dryrun=1
 			;;
 
@@ -1896,7 +1909,7 @@ do
 			;;
 
 		--version | -V)
-			echo "minpkg v$version"
+			echo "minpkg $version"
 			exit
 			;;
 
